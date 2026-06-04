@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Studio — Autonomous Dev Dashboard</title>
+<style>
+  :root {
+    --bg: #080b14;
+    --surface: #0d1117;
+    --surface2: #161b27;
+    --border: #1e2535;
+    --text: #e2e8f0;
+    --muted: #4a5568;
+    --accent: #6366f1;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text { font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; }
+  .logo-sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .last-update { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── Layout ── */
+  .main { display: grid; grid-template-columns: 280px 1fr; gap: 0; height: calc(100vh - 65px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── Stats ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 0.65rem; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+
+  /* ── Agent Cards ── */
+  .agent-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .agent-card.active { border-color: currentColor; }
+  .agent-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .agent-card.active::before { opacity: 0.04; background: currentColor; }
+
+  .agent-avatar {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .agent-avatar .ripple {
+    position: absolute;
+    width: 100%; height: 100%;
+    border-radius: 10px;
+    border: 2px solid currentColor;
+    animation: ripple 1.8s ease-out infinite;
+    opacity: 0;
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+
+  .agent-info { flex: 1; min-width: 0; }
+  .agent-name { font-size: 0.82rem; font-weight: 600; margin-bottom: 3px; }
+  .agent-task {
+    font-size: 0.68rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-dot.active { background: var(--green); animation: pulse 1.2s infinite; }
+  .status-dot.idle { background: var(--muted); }
+  .status-dot.thinking { background: var(--yellow); animation: pulse 0.8s infinite; }
+  .status-dot.error { background: var(--red); }
+
+  /* ── Activity Log ── */
+  .log-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+  }
+
+  .log-entry {
+    font-size: 0.67rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    line-height: 1.4;
+  }
+
+  .log-time { color: #2d3748; flex-shrink: 0; }
+  .log-icon { flex-shrink: 0; }
+  .log-msg { flex: 1; }
+
+  /* ── Content Area ── */
+  .content {
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ── Pipeline Kanban ── */
+  .pipeline-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .pipeline-title { font-size: 1rem; font-weight: 700; }
+
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .kanban-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 12px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kanban-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .kanban-col-icon { font-size: 14px; }
+  .kanban-col-name { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; }
+  .kanban-count {
+    margin-left: auto;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .game-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: default;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .game-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+  .game-card-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .game-card-concept {
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+
+  .game-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tag {
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.2);
+    color: var(--accent);
+    font-size: 0.58rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+
+  .game-card-progress {
+    margin-top: 8px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .game-card-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width 0.5s ease;
+  }
+
+  .game-card.active-build {
+    border-color: var(--green);
+    animation: glow-green 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    50% { box-shadow: 0 0 12px 2px rgba(16,185,129,0.2); }
+  }
+
+  .active-indicator {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.2s infinite;
+  }
+
+  /* ── Timeline ── */
+  .timeline-section { }
+  .timeline-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 24px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 8px 0;
+    position: relative;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 12px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    flex-shrink: 0;
+  }
+
+  .timeline-time {
+    font-size: 0.65rem;
+    color: var(--muted);
+    width: 80px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .timeline-content { flex: 1; }
+  .timeline-event { font-size: 0.78rem; font-weight: 500; }
+  .timeline-detail { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+  /* ── Idea Generator Panel ── */
+  .idea-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .idea-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .idea-panel-title { font-size: 0.95rem; font-weight: 700; }
+
+  .btn {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-sm { padding: 5px 12px; font-size: 0.7rem; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── Game Detail Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  /* ── Background Network Animation ── */
+  #network-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.15;
+    z-index: 0;
+  }
+
+  .main { position: relative; z-index: 1; }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .kanban { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .kanban { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="network-canvas"></canvas>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎮</div>
+    <div>
+      <div class="logo-text">GAME STUDIO</div>
+      <div class="logo-sub">Autonomous Dev System</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge" id="live-badge">
+      <div class="live-dot" id="live-dot"></div>
+      <span id="live-label">LIVE</span>
+    </div>
+    <button id="studio-toggle" onclick="toggleStudio()" style="
+      display:flex;align-items:center;gap:7px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      border:none;border-radius:8px;color:white;
+      padding:7px 14px;font-size:0.75rem;font-weight:700;
+      cursor:pointer;letter-spacing:0.5px;transition:all 0.2s;
+    ">
+      <span id="toggle-icon">⏸</span>
+      <span id="toggle-label">PAUSE STUDIO</span>
+    </button>
+    <span class="last-update" id="last-update">Loading...</span>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Stats -->
+    <div>
+      <div class="section-label">Studio Stats</div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-ideas" style="color: var(--yellow)">0</div>
+          <div class="stat-label">IDEAS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-progress" style="color: var(--blue)">0</div>
+          <div class="stat-label">IN PROGRESS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-completed" style="color: var(--purple)">0</div>
+          <div class="stat-label">COMPLETED</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-shipped" style="color: var(--green)">0</div>
+          <div class="stat-label">SHIPPED</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agents -->
+    <div>
+      <div class="section-label">Active Agents</div>
+      <div id="agents-list" style="display:flex;flex-direction:column;gap:8px;">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+      <div class="section-label">Activity Log</div>
+      <div class="log-container" id="log-container">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+
+    <!-- Idea Approval Panel -->
+    <div id="approval-panel">
+      <div class="pipeline-header">
+        <div class="pipeline-title">💡 Awaiting Your Approval</div>
+        <span style="font-size:0.72rem;color:var(--muted)">Click "Build This" to start the pipeline</span>
+      </div>
+      <div id="ideas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- Pipeline Kanban -->
+    <div>
+      <div class="pipeline-header">
+        <div class="pipeline-title">🚀 Development Pipeline</div>
+        <button class="btn btn-sm" onclick="refreshAll()">⟳ Refresh</button>
+      </div>
+      <div class="kanban" id="kanban">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- QA Reports -->
+    <div>
+      <div class="pipeline-title" style="margin-bottom:16px">🧪 QA Reports</div>
+      <div id="qa-reports" style="display:flex;flex-direction:column;gap:10px">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-section">
+      <div class="timeline-title">📋 Recent Activity</div>
+      <div class="timeline" id="timeline">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+  </div>
+</div>
+
+<script>
+// ── Config ──
+const PIPELINE_STAGES = [
+  { id: 'idea',       name: 'Ideas',      icon: '💡', color: '#f59e0b' },
+  { id: 'research',   name: 'Research',   icon: '🔬', color: '#3b82f6' },
+  { id: 'design',     name: 'Design',     icon: '🎨', color: '#8b5cf6' },
+  { id: 'build',      name: 'Build',      icon: '⚙️', color: '#10b981' },
+  { id: 'qa',         name: 'QA / Ship',  icon: '🚀', color: '#06b6d4' },
+];
+
+// ── State ──
+let studioState = { agents: [], stats: {}, activityLog: [] };
+let queueData   = { ideas: [], inProgress: [], completed: [], shipped: [] };
+
+// ── Network Background Canvas ──
+const canvas = document.getElementById('network-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function initCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  particles = Array.from({ length: 60 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    r: Math.random() * 2 + 1,
+  }));
+}
+
+function drawNetwork() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > canvas.width)  p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#6366f1';
+    ctx.fill();
+  });
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+      if (d < 120) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(99,102,241,${(1 - d / 120) * 0.5})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawNetwork);
+}
+
+window.addEventListener('resize', initCanvas);
+initCanvas();
+drawNetwork();
+
+// ── Data Loading ──
+async function loadState() {
+  try {
+    const r1 = await fetch('./pipeline/state.json?' + Date.now());
+    studioState = await r1.json();
+  } catch(e) { console.warn('state.json not found, using defaults'); }
+
+  try {
+    const r2 = await fetch('./pipeline/queue.json?' + Date.now());
+    queueData = await r2.json();
+  } catch(e) { console.warn('queue.json not found, using defaults'); }
+
+  render();
+}
+
+// ── Studio Toggle ──
+async function toggleStudio() {
+  const running = studioState.studioRunning !== false;
+  studioState.studioRunning = !running;
+  updateToggleUI(studioState.studioRunning);
+
+  // Write new state back to state.json via a small fetch POST isn't possible
+  // from a static file server — instead we update visually and note that
+  // the agent reads studioRunning from state.json on each cycle start.
+  // User must save manually OR agent writes it. Show instruction.
+  const msg = studioState.studioRunning
+    ? '▶ Studio RESUMED — agents will run on next cycle'
+    : '⏸ Studio PAUSED — current cycle will finish, then agents stop';
+  showToast(msg, studioState.studioRunning ? 'var(--green)' : 'var(--yellow)');
+}
+
+function updateToggleUI(running) {
+  const btn   = document.getElementById('studio-toggle');
+  const icon  = document.getElementById('toggle-icon');
+  const label = document.getElementById('toggle-label');
+  const dot   = document.getElementById('live-dot');
+  const live  = document.getElementById('live-label');
+
+  if (running) {
+    btn.style.background   = 'linear-gradient(135deg,#10b981,#059669)';
+    icon.textContent       = '⏸';
+    label.textContent      = 'PAUSE STUDIO';
+    dot.style.background   = 'var(--green)';
+    dot.style.animation    = 'pulse 1.5s ease-in-out infinite';
+    live.textContent       = 'LIVE';
+  } else {
+    btn.style.background   = 'linear-gradient(135deg,#f59e0b,#d97706)';
+    icon.textContent       = '▶';
+    label.textContent      = 'RESUME STUDIO';
+    dot.style.background   = 'var(--yellow)';
+    dot.style.animation    = 'none';
+    live.textContent       = 'PAUSED';
+  }
+}
+
+function showToast(msg, color = 'var(--accent)') {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--surface);border:1px solid ${color};border-radius:10px;
+    padding:12px 20px;font-size:0.8rem;color:var(--text);z-index:999;
+    box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:opacity 0.4s;
+    display:flex;align-items:center;gap:8px;
+  `;
+  t.innerHTML = `<span style="color:${color};font-size:1rem">●</span> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+}
+
+// ── Rendering ──
+function render() {
+  renderIdeasGrid();
+  renderStats();
+  renderAgents();
+  renderLog();
+  renderKanban();
+  renderTimeline();
+  updateToggleUI(studioState.studioRunning !== false);
+  document.getElementById('last-update').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── Art Style config ──
+const ART_STYLES = {
+  neon:       { label: 'Neon',       icon: '🌟', color: '#06b6d4' },
+  pixel:      { label: 'Pixel Art',  icon: '👾', color: '#8b5cf6' },
+  vector:     { label: 'Vector',     icon: '🔷', color: '#3b82f6' },
+  retro:      { label: 'Retro',      icon: '👾', color: '#f59e0b' },
+  minimalist: { label: 'Minimalist', icon: '✨', color: '#94a3b8' },
+  cute:       { label: 'Cute',       icon: '🌸', color: '#f472b6' },
+};
+
+function renderIdeasGrid() {
+  const el      = document.getElementById('ideas-grid');
+  const panel   = document.getElementById('approval-panel');
+  const pending = (queueData.ideas || []).filter(g => !g.approved);
+
+  if (pending.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  el.innerHTML = pending.map(g => {
+    const style   = ART_STYLES[g.artStyle] || ART_STYLES.neon;
+    const tags    = (g.tags || []).slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('');
+    return `
+    <div style="
+      background:var(--surface);border:1px solid var(--border);border-radius:12px;
+      padding:16px;display:flex;flex-direction:column;gap:10px;
+      transition:border-color 0.2s;position:relative;overflow:hidden;
+    " onmouseenter="this.style.borderColor='${style.color}'" onmouseleave="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="font-size:0.88rem;font-weight:700">${g.title}</div>
+        <span style="font-size:0.65rem;background:var(--surface2);border:1px solid var(--border);
+          border-radius:10px;padding:2px 8px;color:var(--muted);white-space:nowrap">${g.crazygamesCategory || g.genre}</span>
+      </div>
+      <div style="font-size:0.72rem;color:#94a3b8;line-height:1.5">${g.concept}</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:0.7rem;background:${style.color}22;border:1px solid ${style.color}44;
+          color:${style.color};padding:2px 8px;border-radius:8px">
+          ${style.icon} ${style.label}
+        </span>
+        <span style="font-size:0.65rem;color:var(--muted)">~${g.estimatedBuildTime || '?'}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${tags}</div>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button onclick="approveBuild('${g.id}')" style="
+          flex:1;background:linear-gradient(135deg,var(--green),#059669);
+          border:none;border-radius:8px;color:white;padding:8px;
+          font-size:0.75rem;font-weight:700;cursor:pointer;letter-spacing:0.3px;
+          transition:opacity 0.2s
+        " onmouseenter="this.style.opacity=0.85" onmouseleave="this.style.opacity=1">
+          ▶ Build This
+        </button>
+        <button onclick="changeStyle('${g.id}')" style="
+          background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          color:var(--muted);padding:8px 10px;font-size:0.75rem;cursor:pointer;
+          transition:all 0.2s
+        " title="Change art style">🎨</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function approveBuild(gameId) {
+  const game = (queueData.ideas || []).find(g => g.id === gameId);
+  if (!game) return;
+  showToast(`▶ "${game.title}" approved — tell Claude to run next cycle to start building`, 'var(--green)');
+  // Mark visually — actual queue update happens when Claude runs the cycle
+  const cards = document.querySelectorAll('#ideas-grid > div');
+  cards.forEach(card => {
+    if (card.querySelector('button[onclick*="' + gameId + '"]')) {
+      card.style.borderColor = 'var(--green)';
+      card.style.opacity = '0.6';
+      card.querySelector('button[onclick*="approveBuild"]').textContent = '✅ Queued — tell Claude to build';
+      card.querySelector('button[onclick*="approveBuild"]').disabled = true;
+    }
+  });
+  // Store in sessionStorage so Claude can read the instruction
+  const pending = JSON.parse(sessionStorage.getItem('buildQueue') || '[]');
+  pending.push(gameId);
+  sessionStorage.setItem('buildQueue', JSON.stringify(pending));
+}
+
+function changeStyle(gameId) {
+  const styles = Object.keys(ART_STYLES);
+  const names  = styles.map(s => ART_STYLES[s].icon + ' ' + ART_STYLES[s].label).join('\n');
+  const choice = prompt('Choose art style:\n\n' + names + '\n\nType one of: ' + styles.join(', '));
+  if (choice && ART_STYLES[choice]) {
+    showToast(`Art style changed to ${ART_STYLES[choice].label} — tell Claude to apply this`, 'var(--purple)');
+  }
+}
+
+function renderStats() {
+  const all = [
+    ...(queueData.ideas || []),
+    ...(queueData.inProgress || []),
+    ...(queueData.completed || []),
+    ...(queueData.shipped || []),
+  ];
+  document.getElementById('stat-ideas').textContent     = (queueData.ideas || []).length;
+  document.getElementById('stat-progress').textContent  = (queueData.inProgress || []).length;
+  document.getElementById('stat-completed').textContent = (queueData.completed || []).length;
+  document.getElementById('stat-shipped').textContent   = (queueData.shipped || []).length;
+}
+
+function renderAgents() {
+  const el = document.getElementById('agents-list');
+  const agents = studioState.agents || [];
+  el.innerHTML = agents.map(a => {
+    const isActive   = a.status === 'active';
+    const isThinking = a.status === 'thinking';
+    return `
+    <div class="agent-card ${isActive || isThinking ? 'active' : ''}" style="color:${a.color}">
+      <div class="agent-avatar" style="background:${a.color}22; color:${a.color}">
+        ${a.icon}
+        ${isActive ? `<div class="ripple" style="color:${a.color}"></div>` : ''}
+      </div>
+      <div class="agent-info">
+        <div class="agent-name">${a.name}</div>
+        <div class="agent-task">${a.currentTask}</div>
+      </div>
+      <div class="status-dot ${a.status || 'idle'}"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderLog() {
+  const el = document.getElementById('log-container');
+  const log = (studioState.activityLog || []).slice(-30).reverse();
+  if (log.length === 0) {
+    el.innerHTML = `<div class="log-entry"><span class="log-msg">No activity yet. Run the autonomous agent to start.</span></div>`;
+    return;
+  }
+  el.innerHTML = log.map(l => `
+    <div class="log-entry">
+      <span class="log-time">${l.time || ''}</span>
+      <span class="log-icon">${l.icon || '•'}</span>
+      <span class="log-msg">${l.msg || ''}</span>
+    </div>`).join('');
+}
+
+function renderKanban() {
+  const el = document.getElementById('kanban');
+  const allGames = [
+    ...(queueData.ideas      || []).map(g => ({...g, stage: 'idea'})),
+    ...(queueData.inProgress || []).map(g => ({...g})),
+    ...(queueData.completed  || []).map(g => ({...g})),
+    ...(queueData.shipped    || []).map(g => ({...g})),
+  ];
+
+  el.innerHTML = PIPELINE_STAGES.map(stage => {
+    const games = allGames.filter(g => g.status === stage.id || g.stage === stage.id);
+    return `
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <span class="kanban-col-icon">${stage.icon}</span>
+        <span class="kanban-col-name" style="color:${stage.color}">${stage.name}</span>
+        <span class="kanban-count">${games.length}</span>
+      </div>
+      ${games.map(g => renderGameCard(g)).join('') || `<div style="color:var(--muted);font-size:0.68rem;text-align:center;margin-top:20px">Empty</div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderGameCard(g) {
+  const isActive = g.activeAgent != null;
+  const progress = g.progress || 0;
+  const tags = (g.tags || []).slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('');
+  return `
+  <div class="game-card ${isActive ? 'active-build' : ''}" onclick="showGameDetail('${g.id}')">
+    ${isActive ? '<div class="active-indicator"></div>' : ''}
+    <div class="game-card-title">${g.title}</div>
+    <div class="game-card-concept">${(g.concept || '').slice(0, 80)}${g.concept?.length > 80 ? '…' : ''}</div>
+    <div class="game-card-tags">${tags}</div>
+    ${progress > 0 ? `
+    <div class="game-card-progress">
+      <div class="game-card-progress-fill" style="width:${progress}%"></div>
+    </div>` : ''}
+  </div>`;
+}
+
+function renderTimeline() {
+  const el = document.getElementById('timeline');
+  const log = (studioState.activityLog || []).slice(-12).reverse();
+  if (log.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.78rem">No activity logged yet.</div>`;
+    return;
+  }
+  const colors = { '💡': '#f59e0b', '🔬': '#3b82f6', '🎨': '#8b5cf6', '⚙️': '#10b981', '🚀': '#06b6d4', '✅': '#10b981', '❌': '#ef4444' };
+  el.innerHTML = log.map(l => {
+    const color = colors[l.icon] || '#6366f1';
+    return `
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:${color}"></div>
+      <div class="timeline-time">${l.time || ''}</div>
+      <div class="timeline-content">
+        <div class="timeline-event">${l.icon || ''} ${l.msg || ''}</div>
+        ${l.detail ? `<div class="timeline-detail">${l.detail}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Game Detail Modal ──
+function showGameDetail(gameId) {
+  const allGames = [
+    ...(queueData.ideas      || []),
+    ...(queueData.inProgress || []),
+    ...(queueData.completed  || []),
+    ...(queueData.shipped    || []),
+  ];
+  const game = allGames.find(g => g.id === gameId);
+  if (!game) return;
+
+  const modal = document.getElementById('modal-content');
+  const stageLabel = PIPELINE_STAGES.find(s => s.id === game.status)?.name || game.status;
+  modal.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:1.2rem;margin-bottom:4px">${game.title}</h2>
+        <span style="font-size:0.7rem;color:var(--muted);letter-spacing:1px">${game.genre?.toUpperCase() || ''} · ${stageLabel}</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div style="font-size:0.85rem;color:#94a3b8;line-height:1.6;margin-bottom:16px">${game.concept || ''}</div>
+    ${game.researchNotes ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:0.75rem;color:var(--muted)"><strong style="color:var(--text)">Research Notes</strong><br>${game.researchNotes}</div>` : ''}
+    ${game.designNotes   ? `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:0.75rem;color:var(--muted)"><strong style="color:var(--text)">Design Notes</strong><br>${game.designNotes}</div>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">
+      ${(game.tags||[]).map(t => `<span class="tag">${t}</span>`).join('')}
+    </div>
+    ${game.gameFile ? `<a href="${game.gameFile}" target="_blank" class="btn" style="display:inline-block;text-decoration:none">▶ Play Game</a>` : ''}
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+// ── QA Reports ──
+let qaReports = {};
+
+async function loadQAReports() {
+  const allGames = [
+    ...(queueData.ideas      || []),
+    ...(queueData.inProgress || []),
+    ...(queueData.completed  || []),
+    ...(queueData.shipped    || []),
+  ];
+  for (const game of allGames) {
+    try {
+      const r = await fetch(`./pipeline/qa-reports/${game.id}.json?` + Date.now());
+      if (r.ok) qaReports[game.id] = await r.json();
+    } catch(e) {}
+  }
+  renderQAReports();
+}
+
+function renderQAReports() {
+  const el = document.getElementById('qa-reports');
+  const reports = Object.values(qaReports);
+  if (reports.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.78rem">No QA reports yet.</div>`;
+    return;
+  }
+  el.innerHTML = reports.map(r => {
+    const pass    = r.verdict === 'PASS';
+    const color   = pass ? 'var(--green)' : r.verdict === 'FAIL' ? 'var(--red)' : 'var(--yellow)';
+    const icon    = pass ? '✅' : r.verdict === 'FAIL' ? '❌' : '⏳';
+    const passed  = (r.passedTests  || []).length;
+    const failed  = (r.failedTests  || []).length;
+    const warns   = (r.warnings     || []).length;
+    const issues  = (r.criticalIssues || []);
+    return `
+    <div style="background:var(--surface2);border:1px solid ${color}22;border-left:3px solid ${color};border-radius:10px;padding:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:0.85rem;font-weight:600">${icon} ${r.gameTitle || r.gameId}</div>
+        <span style="font-size:0.68rem;background:${color}22;color:${color};padding:2px 8px;border-radius:10px;font-weight:600">${r.verdict}</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:0.7rem;margin-bottom:8px">
+        <span style="color:var(--green)">✓ ${passed} passed</span>
+        ${failed > 0 ? `<span style="color:var(--red)">✗ ${failed} failed</span>` : ''}
+        ${warns  > 0 ? `<span style="color:var(--yellow)">⚠ ${warns} warnings</span>` : ''}
+        <span style="color:var(--muted)">retry ${r.retryCount || 0}</span>
+      </div>
+      ${issues.length > 0 ? `
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+        ${issues.map(i => `
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:8px;font-size:0.68rem">
+          <div style="color:var(--red);font-weight:600;margin-bottom:2px">✗ ${i.test}</div>
+          <div style="color:var(--muted)">${i.detail}</div>
+          ${i.fix ? `<div style="color:var(--yellow);margin-top:4px">Fix: ${i.fix}</div>` : ''}
+        </div>`).join('')}
+      </div>` : ''}
+      ${r.devFeedback ? `<div style="margin-top:8px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:6px;padding:8px;font-size:0.68rem;color:var(--muted)"><strong style="color:var(--text)">Dev Feedback:</strong><br>${r.devFeedback}</div>` : ''}
+      ${r.shipRecommendation ? `<div style="margin-top:8px;font-size:0.68rem;color:var(--green)">${r.shipRecommendation}</div>` : ''}
+      <div style="margin-top:6px;font-size:0.62rem;color:var(--muted)">Tested ${r.testedAt ? new Date(r.testedAt).toLocaleString() : 'unknown'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Auto Refresh ──
+async function refreshAll() {
+  await loadState();
+  await loadQAReports();
+}
+setInterval(refreshAll, 5000);
+
+// ── Init ──
+loadState().then(loadQAReports);
+</script>
+</body>
+</html>

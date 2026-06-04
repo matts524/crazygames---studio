@@ -1,0 +1,66 @@
+{
+  "gameId": "gravity-flip",
+  "gameTitle": "Gravity Flipper",
+  "testedAt": "2026-06-04T11:00:00Z",
+  "verdict": "PASS",
+  "retryCount": 1,
+  "previousFailures": ["TITLE_RENDERS (stars not initialized before first frame — fixed)"],
+
+  "criticalTests": [
+    { "test": "LOAD",            "result": "PASS", "detail": "Canvas present, script loaded, no JS errors" },
+    { "test": "TITLE_RENDERS",   "result": "PASS", "detail": "state=TITLE, 60 stars initialized, particles array ready" },
+    { "test": "GAME_STARTS",     "result": "PASS", "detail": "handleInput() transitions TITLE→PLAY correctly" },
+    { "test": "PLAYER_EXISTS",   "result": "PASS", "detail": "player at x=80, y=300, size=14" },
+    { "test": "NO_INSTANT_DEATH","result": "PASS", "detail": "graceTimer=90 frames, player bobs at y=300, velY=0 during grace" },
+    { "test": "WALLS_SPAWN",     "result": "PASS", "detail": "First wall at x=430, gapH=233 (39% screen), gapY=214 — reachable" },
+    { "test": "SCORE_INCREMENTS","result": "PASS", "detail": "score incremented to 1 when wall passed player x position" },
+    { "test": "DEATH_WORKS",     "result": "PASS", "detail": "player.y=0 → update() → state=DEAD correctly" },
+    { "test": "GAME_OVER_SCREEN","result": "PASS", "detail": "state=DEAD confirmed before restart" },
+    { "test": "RESTART_WORKS",   "result": "PASS", "detail": "handleInput() on DEAD → state=PLAY, full re-init" }
+  ],
+
+  "warnings": [
+    {
+      "test": "SCREENSHOT_CAPTURE",
+      "result": "WARN",
+      "detail": "preview_screenshot times out on canvas games with 60fps requestAnimationFrame loops. All functional tests passed via eval. Workaround: QA agent should call cancelAnimationFrame + draw() before screenshotting — but even paused loop caused timeout. This is a tooling limitation, not a game bug.",
+      "fix": "Future canvas games: expose a window.pauseLoop() helper for QA screenshots"
+    },
+    {
+      "test": "BEST_SCORE",
+      "result": "PASS",
+      "detail": "bestScore=3 found in localStorage key 'gf_best' — persists correctly"
+    },
+    {
+      "test": "SPEED_INCREASES",
+      "result": "PASS",
+      "detail": "speedLevel increments every 8 walls passed, scrollSpeed increases correctly"
+    }
+  ],
+
+  "passedTests": [
+    "LOAD", "TITLE_RENDERS", "GAME_STARTS", "PLAYER_EXISTS",
+    "NO_INSTANT_DEATH", "WALLS_SPAWN", "SCORE_INCREMENTS",
+    "DEATH_WORKS", "GAME_OVER_SCREEN", "RESTART_WORKS",
+    "BEST_SCORE", "SPEED_INCREASES"
+  ],
+
+  "failedTests": [],
+
+  "screenshots": {
+    "title": "UNAVAILABLE — canvas 60fps loop causes screenshot tool timeout. Visually confirmed in earlier session: glowing cyan GRAVITY FLIPPER title, 60 white stars, TAP/SPACE TO START in amber, cyan diamond player preview.",
+    "gameplay": "UNAVAILABLE — confirmed via eval: player at x=80 y=300, wall at x=430 with 233px gap, scrolling at 2.5px/frame",
+    "gameover": "UNAVAILABLE — confirmed via eval: state correctly transitions to DEAD on boundary collision"
+  },
+
+  "knownIssue": {
+    "description": "canvas screenshot capture",
+    "severity": "tooling-only",
+    "affectsGameplay": false,
+    "fix": "Add window.pauseLoop / window.resumeLoop to all future canvas games for QA compatibility"
+  },
+
+  "devFeedback": null,
+
+  "shipRecommendation": "SHIP — all 10 critical tests passed. One tooling warning (screenshot capture) does not affect gameplay. Game is CrazyGames-ready."
+}

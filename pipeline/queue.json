@@ -1,0 +1,113 @@
+{
+  "ideas": [
+    {
+      "id": "snake-chaos",
+      "title": "Snake Chaos",
+      "concept": "Multiplayer snake where eating power-ups changes physics — gravity flips, time slows, snakes merge",
+      "genre": "arcade",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "neon",
+      "priority": 1,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["multiplayer", "physics", "arcade", "casual"],
+      "crazygamesCategory": "Arcade",
+      "estimatedBuildTime": "2-3 hours"
+    },
+    {
+      "id": "tower-collapse",
+      "title": "Tower Collapse",
+      "concept": "Jenga-style physics puzzle where you must remove blocks without toppling a tower of sleeping animals",
+      "genre": "puzzle",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "pixel",
+      "priority": 2,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["physics", "puzzle", "casual", "cute"],
+      "crazygamesCategory": "Puzzle",
+      "estimatedBuildTime": "3-4 hours"
+    },
+    {
+      "id": "pixel-chef",
+      "title": "Pixel Chef Rush",
+      "concept": "Overcooked-style cooking game, single player, with pixel art aesthetic and increasingly absurd recipe combos",
+      "genre": "casual",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "pixel",
+      "priority": 3,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["cooking", "casual", "pixel-art", "time-management"],
+      "crazygamesCategory": "Casual",
+      "estimatedBuildTime": "4-5 hours"
+    },
+    {
+      "id": "word-dungeon",
+      "title": "Word Dungeon",
+      "concept": "Roguelike where your weapon stats are determined by the words you spell — longer/rarer words = more power",
+      "genre": "word",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "retro",
+      "priority": 4,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["word", "roguelike", "rpg", "educational"],
+      "crazygamesCategory": "Word",
+      "estimatedBuildTime": "5-6 hours"
+    },
+    {
+      "id": "color-flood",
+      "title": "Color Flood",
+      "concept": "Flood-fill puzzle — paint the board one color at a time, starting from the corner, beat it in limited moves",
+      "genre": "puzzle",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "minimalist",
+      "priority": 5,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["puzzle", "color", "minimalist", "casual"],
+      "crazygamesCategory": "Puzzle",
+      "estimatedBuildTime": "2-3 hours"
+    },
+    {
+      "id": "idle-factory",
+      "title": "Idle Factory",
+      "concept": "Idle clicker where you automate a toy factory — buy machines, hire robots, unlock production chains",
+      "genre": "idle",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "vector",
+      "priority": 6,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": ["idle", "clicker", "casual", "incremental"],
+      "crazygamesCategory": "Clicker",
+      "estimatedBuildTime": "4-5 hours"
+    }
+  ],
+  "inProgress": [],
+  "completed": [],
+  "shipped": [
+    {
+      "id": "gravity-flip",
+      "title": "Gravity Flipper",
+      "concept": "Endless runner where you flip gravity with one button — obstacles come from both directions simultaneously",
+      "genre": "arcade",
+      "status": "shipped",
+      "approved": true,
+      "artStyle": "neon",
+      "priority": 1,
+      "progress": 100,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "completedAt": "2026-06-04T10:46:00Z",
+      "tags": ["endless-runner", "one-button", "arcade", "hypercasual"],
+      "crazygamesCategory": "Arcade",
+      "gameFile": "./games/gravity-flip/game.html",
+      "iframeTestPassed": true,
+      "githubPagesUrl": "https://matts524.github.io/crazygames-studio/games/gravity-flip/game.html",
+      "crazygamesSubmitted": false,
+      "researchNotes": "One-button hypercasual, high CrazyGames fit. Similar to Flappy Bird/VVVVVV. Dual-lane obstacle mechanic is the differentiator.",
+      "designNotes": "Gravity flip on tap/space. Neon visual style. Web Audio API sounds. Progressive speed increase. localStorage high score."
+    }
+  ]
+}

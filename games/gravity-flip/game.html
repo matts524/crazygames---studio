@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Gravity Flipper</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+// ── Responsive sizing ──
+const BASE_W = 400, BASE_H = 600;
+let W = BASE_W, H = BASE_H, scale = 1;
+
+function resize() {
+  const maxW = Math.min(window.innerWidth, 480);
+  const maxH = window.innerHeight;
+  scale = Math.min(maxW / BASE_W, maxH / BASE_H);
+  W = BASE_W; H = BASE_H;
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.style.width  = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let ac = null;
+
+function ensureAudio() {
+  if (!ac) ac = new AudioCtx();
+}
+
+function playTone(freq, duration, type = 'sine', gain = 0.3) {
+  if (!ac) return;
+  try {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ac.currentTime);
+    g.gain.setValueAtTime(gain, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+    o.start(); o.stop(ac.currentTime + duration);
+  } catch(e) {}
+}
+
+function playFlip()    { playTone(330, 0.08, 'sine', 0.25); }
+function playPass()    { playTone(880, 0.04, 'sine', 0.15); }
+function playSpeedUp() {
+  playTone(440, 0.1, 'sine', 0.2);
+  setTimeout(() => playTone(660, 0.1, 'sine', 0.2), 100);
+  setTimeout(() => playTone(880, 0.1, 'sine', 0.2), 200);
+}
+function playDeath() {
+  playTone(400, 0.15, 'sawtooth', 0.3);
+  setTimeout(() => playTone(300, 0.15, 'sawtooth', 0.25), 120);
+  setTimeout(() => playTone(200, 0.3,  'sawtooth', 0.2),  240);
+}
+
+// ── State ──
+const STATES = { TITLE: 0, PLAY: 1, DEAD: 2 };
+let state = STATES.TITLE;
+
+// Player
+let player, gravDir, velY, trail;
+
+// Walls
+let walls, wallTimer, wallInterval;
+
+// Scoring
+let score, bestScore, speedLevel, scrollSpeed;
+const BASE_SCROLL = 2.5, SCROLL_INC = 0.15, MAX_SCROLL = 6;
+const BASE_INTERVAL = 220, MIN_INTERVAL = 160;
+const GAP_MIN = 0.28, GAP_START = 0.40;
+
+// FX
+let shake, shakeTimer, flashAlpha, particles;
+let speedUpMsg, speedUpTimer;
+let stars;
+
+// Time
+let lastTime = 0;
+const FRAME = 1000 / 60;
+
+function init() {
+  player = { x: 80, y: H / 2, size: 14 };
+  gravDir = 1;     // 1 = down, -1 = up
+  velY    = 0;
+
+  trail = [];
+  walls = [];
+  wallTimer = 0;
+
+  score       = 0;
+  speedLevel  = 1;
+  scrollSpeed = BASE_SCROLL;
+  wallInterval = BASE_INTERVAL;
+
+  shake = 0; shakeTimer = 0;
+  flashAlpha  = 0;
+  particles   = [];
+  speedUpMsg  = false; speedUpTimer = 0;
+  graceTimer  = 90;
+
+  stars = Array.from({ length: 60 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: Math.random() * 1.5 + 0.3,
+    s: Math.random() * 0.5 + 0.3,
+  }));
+
+  spawnWall();
+}
+
+function spawnWall() {
+  const gap = Math.max(GAP_MIN, GAP_START - speedLevel * 0.012) * H;
+  const minY = 40;
+  const maxY = H - 40 - gap;
+  const gapY = minY + Math.random() * (maxY - minY);
+  walls.push({ x: W + 30, gapY, gapH: gap, passed: false });
+}
+
+function flip() {
+  graceTimer = 0;
+  gravDir *= -1;
+  velY     = 0;
+  playFlip();
+}
+
+function spawnParticles(x, y) {
+  for (let i = 0; i < 14; i++) {
+    const angle = (i / 14) * Math.PI * 2;
+    const spd   = 2 + Math.random() * 3;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1, decay: 0.04 + Math.random() * 0.03,
+      r: 3 + Math.random() * 3,
+      hue: Math.random() < 0.5 ? '#06b6d4' : '#f59e0b',
+    });
+  }
+}
+
+function update(dt) {
+  if (state !== STATES.PLAY) return;
+
+  const t = dt / FRAME;
+
+  // Grace period: player hovers for 90 frames before gravity kicks in
+  if (graceTimer > 0) {
+    graceTimer -= t;
+    player.y = H / 2 + Math.sin(Date.now() / 300) * 8; // gentle bob
+    // still scroll walls during grace so there's visual feedback
+    walls.forEach(w => w.x -= scrollSpeed * t);
+    walls = walls.filter(w => w.x > -30);
+    wallTimer += scrollSpeed * t;
+    if (wallTimer >= wallInterval) { wallTimer = 0; spawnWall(); }
+    stars.forEach(s => { s.x -= s.s * t; if (s.x < 0) s.x = W; });
+    return;
+  }
+
+  // Scroll speed progression
+  const newLevel = 1 + Math.floor(score / 8);
+  if (newLevel > speedLevel) {
+    speedLevel  = newLevel;
+    scrollSpeed = Math.min(BASE_SCROLL + (speedLevel - 1) * SCROLL_INC, MAX_SCROLL);
+    wallInterval = Math.max(MIN_INTERVAL, BASE_INTERVAL - (speedLevel - 1) * 6);
+    speedUpMsg   = true;
+    speedUpTimer = 90;
+    playSpeedUp();
+  }
+
+  // Physics
+  const gravity = (0.38 + speedLevel * 0.008) * gravDir;
+  velY += gravity * t;
+  const maxV = 8;
+  velY = Math.max(-maxV, Math.min(maxV, velY));
+  player.y += velY * t;
+
+  // Trail
+  trail.unshift({ x: player.x, y: player.y });
+  if (trail.length > 10) trail.pop();
+
+  // Boundaries
+  if (player.y - player.size < 0 || player.y + player.size > H) {
+    die();
+    return;
+  }
+
+  // Walls
+  wallTimer += scrollSpeed * t;
+  if (wallTimer >= wallInterval) { wallTimer = 0; spawnWall(); }
+
+  for (let i = walls.length - 1; i >= 0; i--) {
+    const w = walls[i];
+    w.x -= scrollSpeed * t;
+
+    // Score
+    if (!w.passed && w.x + 22 < player.x) {
+      w.passed = true;
+      score++;
+      playPass();
+    }
+
+    // Collision
+    const px = player.x, py = player.y, ps = player.size * 0.75;
+    if (px + ps > w.x && px - ps < w.x + 22) {
+      if (py - ps < w.gapY || py + ps > w.gapY + w.gapH) {
+        die();
+        return;
+      }
+    }
+
+    if (w.x < -30) walls.splice(i, 1);
+  }
+
+  // Particles
+  particles = particles.filter(p => {
+    p.x += p.vx * t; p.y += p.vy * t;
+    p.vy += 0.1 * t;
+    p.life -= p.decay * t;
+    return p.life > 0;
+  });
+
+  // FX timers
+  if (shakeTimer > 0) { shakeTimer -= t; if (shakeTimer <= 0) shake = 0; }
+  if (flashAlpha > 0) flashAlpha = Math.max(0, flashAlpha - 0.04 * t);
+  if (speedUpTimer > 0) { speedUpTimer -= t; if (speedUpTimer <= 0) speedUpMsg = false; }
+
+  // Stars drift
+  stars.forEach(s => { s.x -= s.s * t; if (s.x < 0) s.x = W; });
+}
+
+function die() {
+  state = STATES.DEAD;
+  bestScore = Math.max(bestScore || 0, score);
+  localStorage.setItem('gf_best', bestScore);
+  shake = 6; shakeTimer = 18;
+  flashAlpha = 0.6;
+  spawnParticles(player.x, player.y);
+  playDeath();
+}
+
+// ── Drawing ──
+function draw() {
+  ctx.save();
+  if (shake > 0) {
+    const sx = (Math.random() - 0.5) * shake * 2;
+    const sy = (Math.random() - 0.5) * shake * 2;
+    ctx.translate(sx, sy);
+    shake = Math.max(0, shake - 0.4);
+  }
+
+  // BG
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  stars.forEach(s => {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  if (state === STATES.TITLE) {
+    drawTitle();
+  } else if (state === STATES.PLAY || state === STATES.DEAD) {
+    drawWalls();
+    drawTrail();
+    drawPlayer();
+    drawParticles();
+    drawHUD();
+    if (state === STATES.DEAD) drawDead();
+  }
+
+  // Red flash overlay
+  if (flashAlpha > 0) {
+    ctx.fillStyle = `rgba(239,68,68,${flashAlpha * 0.35})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Edge proximity glow
+  if (state === STATES.PLAY) {
+    const nearTop    = Math.max(0, 1 - player.y / 60);
+    const nearBottom = Math.max(0, 1 - (H - player.y) / 60);
+    if (nearTop > 0) {
+      const g = ctx.createLinearGradient(0, 0, 0, 60);
+      g.addColorStop(0, `rgba(6,182,212,${nearTop * 0.4})`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, 60);
+    }
+    if (nearBottom > 0) {
+      const g = ctx.createLinearGradient(0, H - 60, 0, H);
+      g.addColorStop(0, 'transparent');
+      g.addColorStop(1, `rgba(6,182,212,${nearBottom * 0.4})`);
+      ctx.fillStyle = g; ctx.fillRect(0, H - 60, W, 60);
+    }
+  }
+
+  ctx.restore();
+
+  if (speedUpMsg) drawSpeedUp();
+}
+
+function drawTitle() {
+  // Title
+  ctx.textAlign    = 'center';
+  ctx.fillStyle    = '#06b6d4';
+  ctx.font         = 'bold 42px "Segoe UI", sans-serif';
+  ctx.shadowColor  = '#06b6d4';
+  ctx.shadowBlur   = 20;
+  ctx.fillText('GRAVITY', W / 2, H / 2 - 50);
+  ctx.fillText('FLIPPER', W / 2, H / 2 - 4);
+  ctx.shadowBlur   = 0;
+
+  ctx.fillStyle    = '#94a3b8';
+  ctx.font         = '14px "Segoe UI", sans-serif';
+  ctx.fillText('Flip gravity. Avoid the walls.', W / 2, H / 2 + 38);
+
+  // Blinking prompt
+  if (Math.floor(Date.now() / 600) % 2 === 0) {
+    ctx.fillStyle  = '#f59e0b';
+    ctx.font       = 'bold 15px "Segoe UI", sans-serif';
+    ctx.fillText('TAP / SPACE TO START', W / 2, H / 2 + 80);
+  }
+
+  if (bestScore) {
+    ctx.fillStyle  = '#4a5568';
+    ctx.font       = '12px "Segoe UI", sans-serif';
+    ctx.fillText('Best: ' + bestScore, W / 2, H / 2 + 110);
+  }
+
+  // Demo player
+  ctx.save();
+  ctx.translate(W / 2, H / 2 + 150);
+  ctx.rotate(Math.PI / 4);
+  const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, 14);
+  grd.addColorStop(0, '#06b6d4');
+  grd.addColorStop(1, 'rgba(6,182,212,0.1)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(-10, -10, 20, 20);
+  ctx.restore();
+}
+
+function drawWalls() {
+  walls.forEach(w => {
+    // Top wall
+    const topH = w.gapY;
+    drawWallRect(w.x, 0, 22, topH);
+    // Bottom wall
+    const botY = w.gapY + w.gapH;
+    drawWallRect(w.x, botY, 22, H - botY);
+    // Gap indicator line (subtle)
+    ctx.strokeStyle = 'rgba(168,85,247,0.3)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(w.x + 11, w.gapY + 4);
+    ctx.lineTo(w.x + 11, w.gapY + w.gapH - 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+}
+
+function drawWallRect(x, y, w, h) {
+  if (h <= 0) return;
+  const grd = ctx.createLinearGradient(x, 0, x + w, 0);
+  grd.addColorStop(0, '#7c3aed');
+  grd.addColorStop(1, '#a855f7');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x, y, w, h);
+  // Edge glow
+  ctx.fillStyle = 'rgba(168,85,247,0.5)';
+  ctx.fillRect(x + w - 3, y, 3, h);
+}
+
+function drawTrail() {
+  trail.forEach((p, i) => {
+    const alpha = (1 - i / trail.length) * 0.5;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(Math.PI / 4);
+    const s = player.size * (1 - i / trail.length) * 0.7;
+    ctx.fillStyle = `rgba(6,182,212,${alpha})`;
+    ctx.fillRect(-s, -s, s * 2, s * 2);
+    ctx.restore();
+  });
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(Math.PI / 4);
+  const s = player.size;
+  // Glow
+  ctx.shadowColor = '#06b6d4';
+  ctx.shadowBlur  = 18;
+  const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+  grd.addColorStop(0, '#e0f9ff');
+  grd.addColorStop(0.5, '#06b6d4');
+  grd.addColorStop(1, 'rgba(6,182,212,0.2)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(-s, -s, s * 2, s * 2);
+  ctx.shadowBlur  = 0;
+  ctx.restore();
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle   = p.hue;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  ctx.textAlign  = 'center';
+  ctx.fillStyle  = '#f1f5f9';
+  ctx.font       = 'bold 28px "Segoe UI", sans-serif';
+  ctx.shadowColor= 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 6;
+  ctx.fillText(score, W / 2, 44);
+  ctx.shadowBlur = 0;
+
+  ctx.textAlign  = 'right';
+  ctx.fillStyle  = '#4a5568';
+  ctx.font       = '11px "Segoe UI", sans-serif';
+  ctx.fillText('LVL ' + speedLevel, W - 12, 20);
+
+  // Gravity indicator
+  const arrow = gravDir === 1 ? '▼' : '▲';
+  ctx.fillStyle  = '#06b6d4';
+  ctx.font       = '14px sans-serif';
+  ctx.fillText(arrow, W - 12, 38);
+}
+
+function drawDead() {
+  // Dim overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign  = 'center';
+  ctx.fillStyle  = '#ef4444';
+  ctx.font       = 'bold 40px "Segoe UI", sans-serif';
+  ctx.shadowColor= '#ef4444';
+  ctx.shadowBlur = 20;
+  ctx.fillText('GAME OVER', W / 2, H / 2 - 55);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle  = '#f1f5f9';
+  ctx.font       = 'bold 24px "Segoe UI", sans-serif';
+  ctx.fillText(score + ' walls', W / 2, H / 2 - 10);
+
+  ctx.fillStyle  = '#4a5568';
+  ctx.font       = '13px "Segoe UI", sans-serif';
+  ctx.fillText('Best: ' + bestScore, W / 2, H / 2 + 20);
+
+  if (Math.floor(Date.now() / 700) % 2 === 0) {
+    ctx.fillStyle  = '#f59e0b';
+    ctx.font       = 'bold 14px "Segoe UI", sans-serif';
+    ctx.fillText('TAP / SPACE TO RESTART', W / 2, H / 2 + 65);
+  }
+}
+
+function drawSpeedUp() {
+  const alpha = Math.min(1, speedUpTimer / 30);
+  ctx.globalAlpha = alpha;
+  ctx.textAlign   = 'center';
+  ctx.fillStyle   = '#f59e0b';
+  ctx.font        = 'bold 18px "Segoe UI", sans-serif';
+  ctx.shadowColor = '#f59e0b';
+  ctx.shadowBlur  = 12;
+  ctx.fillText('SPEED UP!', W / 2, H / 2 - 80);
+  ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 1;
+}
+
+// ── Input ──
+function handleInput() {
+  ensureAudio();
+  if (state === STATES.TITLE) {
+    state = STATES.PLAY;
+    init();
+  } else if (state === STATES.PLAY) {
+    flip();
+  } else if (state === STATES.DEAD) {
+    state = STATES.PLAY;
+    init();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    handleInput();
+  }
+});
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  handleInput();
+});
+
+// ── Initialize title-screen state ──
+bestScore = parseInt(localStorage.getItem('gf_best')) || 0;
+particles = [];
+stars = Array.from({ length: 60 }, () => ({
+  x: Math.random() * W,
+  y: Math.random() * H,
+  r: Math.random() * 1.5 + 0.3,
+  s: Math.random() * 0.5 + 0.3,
+}));
+
+function loop(ts) {
+  const dt = Math.min(ts - lastTime, 50);
+  lastTime = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+let _rafId;
+function _loop(ts) { _rafId = requestAnimationFrame(_loop); lastTime = ts || lastTime; update(16.67); draw(); }
+window.pauseLoop  = () => { cancelAnimationFrame(_rafId); draw(); };
+window.resumeLoop = () => { _rafId = requestAnimationFrame(_loop); };
+_rafId = requestAnimationFrame(ts => { lastTime = ts; _rafId = requestAnimationFrame(_loop); });
+</script>
+</body>
+</html>
