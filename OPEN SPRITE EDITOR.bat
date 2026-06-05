@@ -1,0 +1,3 @@
+@echo off
+echo Opening Piskel Sprite Editor...
+start "" "https://www.piskelapp.com/p/create/frame"

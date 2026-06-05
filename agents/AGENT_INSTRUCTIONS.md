@@ -180,3 +180,8 @@ After each agent action, update:
 { "time": "HH:MM", "icon": "💡", "msg": "Short message", "detail": "optional detail" }
 ```
 Icons: 💡 idea, 🔬 research, 🎨 design, ⚙️ build, 🧪 qa, ✅ done, 🚀 shipped, ❌ error
+
+
+## Piskel AVAILABLE ✅
+Sprite editor: https://www.piskelapp.com
+Or run OPEN SPRITE EDITOR.bat

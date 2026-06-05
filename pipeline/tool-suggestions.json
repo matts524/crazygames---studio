@@ -68,12 +68,12 @@
       "affectedAgents": [
         "qa"
       ],
-      "status": "integrating",
+      "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": "2026-06-05T18:52:16.607Z",
       "rejectedAt": null,
       "rejectionReason": null,
-      "integrationNotes": null
+      "integrationNotes": "📥 Running npm install playwright...\n📥 Downloading Playwright Chromium browser...\n📝 Writing tests/game-qa.spec.js...\n📝 Writing to agents/qa-agent-instructions.md...\n🚀 Pushing to GitHub...\n✅ Committed and pushed to GitHub"
     },
     {
       "id": "piskel",
@@ -93,9 +93,9 @@
         "developer",
         "designer"
       ],
-      "status": "pending",
+      "status": "integrating",
       "suggestedAt": "2026-06-05T12:00:00Z",
-      "approvedAt": null,
+      "approvedAt": "2026-06-05T18:57:55.730Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "integrationNotes": null
