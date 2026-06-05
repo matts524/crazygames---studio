@@ -1,0 +1,25 @@
+{
+  "gameId": "pixel-chef",
+  "gameTitle": "Pixel Chef Rush",
+  "round": 1,
+  "reflexionComplete": false,
+  "scoreBefore": {
+    "visual": 1.2, "feel": 0.8, "engagement": 1.0, "clarity": 1.2, "fun": 1.3, "total": 5.5
+  },
+  "scoreAfter": {
+    "visual": 1.4, "feel": 1.6, "engagement": 1.5, "clarity": 1.7, "fun": 1.6, "total": 7.8
+  },
+  "improvements": [
+    { "title": "Screen shake on wrong order / expired timer", "impact": 4, "effort": 1, "priority": 4.0, "implemented": true },
+    { "title": "Urgent order card pulses red when timer < 3s", "impact": 4, "effort": 1, "priority": 4.0, "implemented": true },
+    { "title": "Plate glows green with '✓ READY TO SERVE!' when combo matches", "impact": 4, "effort": 2, "priority": 2.0, "implemented": true },
+    { "title": "Streak counter with bonus coins for consecutive correct orders", "impact": 3, "effort": 1, "priority": 3.0, "implemented": true }
+  ],
+  "skipped": [
+    { "title": "Combo multiplier overlay animation", "reason": "Saved for round 2 — needs score pop animation" },
+    { "title": "Kitchen character reacts to events", "reason": "Saved for round 2" },
+    { "title": "Rush Hour event (2x orders)", "reason": "Round 3 — higher effort" }
+  ],
+  "notes": "Game feel improved dramatically. Screen shake + red pulse make mistakes feel impactful. Green glow on plate removes the biggest clarity issue. Score jumped from 5.5 to 7.8. Round 2 should focus on visual polish and a score pop animation.",
+  "testedAt": "2026-06-05T09:35:00Z"
+}

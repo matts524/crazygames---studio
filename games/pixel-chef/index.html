@@ -83,6 +83,8 @@ function recipesForLevel(lvl) { return RECIPES.filter(r => r.level <= lvl); }
 const STATES = { TITLE:0, PLAY:1, LEVELUP:2, DEAD:3 };
 let state = STATES.TITLE;
 let score, hearts, level, ordersCompleted;
+let shake = 0, shakeFrames = 0;  // screen shake
+let streak = 0;                   // consecutive correct orders
 let orders, plate, particles;
 let orderTimer, levelUpTimer;
 let bestScore = parseInt(localStorage.getItem('pcr_best')) || 0;
@@ -122,6 +124,7 @@ function init() {
   plate  = [];
   particles = [];
   orderTimer = 0;
+  shake = 0; shakeFrames = 0; streak = 0;
   cgStart();
 }
 
@@ -145,6 +148,7 @@ function update(dt) {
     if (ord.timeLeft <= 0) {
       hearts--;
       sfxExpire();
+      shake = 4; shakeFrames = 8; streak = 0; // shake + reset streak on expiry
       spawnParticles(ORDER_SLOTS[i].x + 59, ORDER_SLOTS[i].y + 45, '#ef4444');
       orders[i] = newOrder();
       if (hearts <= 0) { state = STATES.DEAD; cgStop(); bestScore = Math.max(bestScore, score); localStorage.setItem('pcr_best', bestScore); }
@@ -280,12 +284,13 @@ function roundRect(x, y, w, h, r) {
 
 function drawOrder(ord, slot, idx) {
   const { x, y, w, h } = slot;
-  // card bg
-  const isActive = ord === orders.find(o => o.active) || true;
-  ctx.fillStyle = '#2a1a0a';
+  const urgent = ord.timeLeft < 3;
+  // ── IMPROVEMENT 2: urgent card pulses red ──
+  const pulse = urgent ? (Math.sin(Date.now() / 150) * 0.5 + 0.5) : 0;
+  ctx.fillStyle = urgent ? `rgba(80,10,10,${0.6 + pulse*0.4})` : '#2a1a0a';
   roundRect(x, y, w, h, 6); ctx.fill();
-  ctx.strokeStyle = '#6b4c2a';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = urgent ? `rgba(239,68,68,${0.5 + pulse*0.5})` : '#6b4c2a';
+  ctx.lineWidth = urgent ? 2 : 1.5;
   roundRect(x, y, w, h, 6); ctx.stroke();
 
   // timer bar
@@ -308,13 +313,17 @@ function drawOrder(ord, slot, idx) {
 }
 
 function drawPlate() {
-  // Plate area
   const px2 = 80, py = 148, pw = 240, ph = 160;
-  ctx.fillStyle = '#2a1a0a';
+  // ── IMPROVEMENT 3: green glow when plate matches an order ──
+  const isMatch = plate.length > 0 && orders.some(o => plateMatchesOrder(o));
+  const glowPulse = isMatch ? (Math.sin(Date.now()/200)*0.4+0.6) : 0;
+  ctx.fillStyle = isMatch ? `rgba(10,40,20,${0.8+glowPulse*0.2})` : '#2a1a0a';
   roundRect(px2, py, pw, ph, 12); ctx.fill();
-  ctx.strokeStyle = '#6b4c2a';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = isMatch ? `rgba(16,185,129,${glowPulse})` : '#6b4c2a';
+  ctx.lineWidth = isMatch ? 3 : 2;
   roundRect(px2, py, pw, ph, 12); ctx.stroke();
+  // match label
+  if (isMatch) { px('✓ READY TO SERVE!', W/2, py+14, 8, '#10b981', 'center'); }
 
   if (plate.length === 0) {
     px('Tap ingredient', W/2, py + ph/2 - 5, 9, '#4a3020', 'center');
@@ -406,6 +415,13 @@ function drawKitchenBg() {
 }
 
 function drawGame() {
+  // ── IMPROVEMENT 1: Screen shake ──
+  ctx.save();
+  if (shakeFrames > 0) {
+    ctx.translate((Math.random()-0.5)*shake*2, (Math.random()-0.5)*shake*2);
+    shakeFrames--;
+    if (shakeFrames === 0) shake = 0;
+  }
   drawKitchenBg();
 
   // Order area bg
@@ -429,8 +445,22 @@ function drawGame() {
 
   // HUD (drawn last so it's on top)
   drawHUD();
-
   drawParticles();
+  ctx.restore(); // end screen shake
+
+  // ── IMPROVEMENT 3: Streak indicator ──
+  if (streak >= 2) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#000';
+    ctx.fillText(`🔥 ${streak} STREAK`, 9, 38);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`🔥 ${streak} STREAK`, 8, 37);
+    ctx.restore();
+  }
 }
 
 function drawDead() {
@@ -478,16 +508,22 @@ function tryServe() {
   if (idx !== -1) {
     const ord = orders[idx];
     const bonus = Math.ceil(ord.timeLeft / ord.maxTime * 5);
-    score += 10 + bonus;
+    // ── IMPROVEMENT: streak bonus ──
+    streak++;
+    const streakBonus = streak >= 3 ? Math.floor(streak / 3) * 5 : 0;
+    score += 10 + bonus + streakBonus;
     ordersCompleted++;
     sfxCorrect();
     spawnParticles(W/2, H/2, '#10b981');
+    if (streakBonus > 0) spawnParticles(W/2, 60, '#f59e0b'); // gold burst on streak bonus
     orders[idx] = newOrder();
     plate = [];
   } else {
-    // Wrong — lose a heart
+    // Wrong — lose a heart + SCREEN SHAKE
     hearts--;
+    streak = 0; // reset streak
     sfxWrong();
+    shake = 5; shakeFrames = 10; // ── IMPROVEMENT 1: screen shake ──
     spawnParticles(W/2, STATION_Y + 28, '#ef4444');
     plate = [];
     if (hearts <= 0) {

@@ -593,8 +593,14 @@
     <!-- QA Reports -->
     <div>
       <div class="pipeline-title" style="margin-bottom:16px">🧪 QA Reports</div>
-      <div id="qa-reports" style="display:flex;flex-direction:column;gap:10px">
-        <!-- populated by JS -->
+      <div id="qa-reports" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <!-- Reflexion Reports -->
+    <div>
+      <div class="pipeline-title" style="margin-bottom:16px">🔁 Reflexion — Self-Improvement</div>
+      <div id="reflexion-reports" style="display:flex;flex-direction:column;gap:12px">
+        <div style="color:var(--muted);font-size:0.78rem">No reflexion rounds yet — runs automatically after QA passes.</div>
       </div>
     </div>
 
@@ -621,7 +627,9 @@ const PIPELINE_STAGES = [
   { id: 'research',   name: 'Research',   icon: '🔬', color: '#3b82f6' },
   { id: 'design',     name: 'Design',     icon: '🎨', color: '#8b5cf6' },
   { id: 'build',      name: 'Build',      icon: '⚙️', color: '#10b981' },
-  { id: 'qa',         name: 'QA / Ship',  icon: '🚀', color: '#06b6d4' },
+  { id: 'qa',         name: 'QA',         icon: '🧪', color: '#06b6d4' },
+  { id: 'reflexion',  name: 'Reflexion',  icon: '🔁', color: '#ec4899' },
+  { id: 'shipped',    name: 'Shipped',    icon: '🚀', color: '#f59e0b' },
 ];
 
 // ── State ──
@@ -1082,15 +1090,126 @@ function renderQAReports() {
   }).join('');
 }
 
+// ── Reflexion Reports ──
+let reflexionReports = {};
+
+async function loadReflexionReports() {
+  const allGames = [
+    ...(queueData.inProgress || []),
+    ...(queueData.completed  || []),
+    ...(queueData.shipped    || []),
+  ];
+  for (const game of allGames) {
+    for (let r = 1; r <= 3; r++) {
+      const key = `${game.id}-round-${r}`;
+      if (reflexionReports[key]) continue;
+      try {
+        const res = await fetch(`./pipeline/reflexion/${key}.json?` + Date.now());
+        if (res.ok) reflexionReports[key] = await res.json();
+      } catch(e) {}
+    }
+  }
+  renderReflexionReports();
+}
+
+function scoreBar(score, max=2) {
+  const pct = (score / max) * 100;
+  const color = pct >= 75 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+  return `<div style="background:var(--border);border-radius:3px;height:4px;width:80px;display:inline-block;vertical-align:middle;overflow:hidden">
+    <div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div>
+  </div>`;
+}
+
+function renderReflexionReports() {
+  const el = document.getElementById('reflexion-reports');
+  const reports = Object.values(reflexionReports);
+  if (reports.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.78rem">No reflexion rounds yet — runs automatically after QA passes.</div>`;
+    return;
+  }
+
+  // Group by gameId
+  const byGame = {};
+  reports.forEach(r => {
+    if (!byGame[r.gameId]) byGame[r.gameId] = [];
+    byGame[r.gameId].push(r);
+  });
+
+  el.innerHTML = Object.entries(byGame).map(([gameId, rounds]) => {
+    rounds.sort((a,b) => a.round - b.round);
+    const latest = rounds[rounds.length - 1];
+    const complete = latest.reflexionComplete;
+    const roundCount = rounds.length;
+
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #ec4899;border-radius:10px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:0.88rem;font-weight:700">🔁 ${gameId.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div>
+        <span style="font-size:0.68rem;background:${complete?'rgba(16,185,129,0.15)':'rgba(236,72,153,0.12)'};color:${complete?'var(--green)':'#ec4899'};border:1px solid ${complete?'var(--green)':'#ec4899'};padding:2px 8px;border-radius:8px">
+          ${complete ? '✅ Complete' : `Round ${roundCount}/3`}
+        </span>
+      </div>
+
+      ${rounds.map(r => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:0.75rem;font-weight:600;color:#ec4899">Round ${r.round}</span>
+          <span style="font-size:0.7rem;color:var(--muted)">
+            Score: <strong style="color:var(--text)">${r.scoreBefore?.total?.toFixed(1) || '?'}</strong>
+            → <strong style="color:var(--green)">${r.scoreAfter?.total?.toFixed(1) || '?'}</strong> / 10
+          </span>
+        </div>
+
+        ${r.scoreAfter ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;font-size:0.65rem;color:var(--muted)">
+          <div>Visual ${scoreBar(r.scoreAfter.visual)}</div>
+          <div>Feel ${scoreBar(r.scoreAfter.feel)}</div>
+          <div>Engage ${scoreBar(r.scoreAfter.engagement)}</div>
+          <div>Clarity ${scoreBar(r.scoreAfter.clarity)}</div>
+          <div>Fun ${scoreBar(r.scoreAfter.fun)}</div>
+        </div>` : ''}
+
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${(r.improvements||[]).filter(i=>i.implemented).map(i=>`
+          <div style="font-size:0.68rem;color:var(--green);display:flex;align-items:center;gap:5px">
+            <span>✓</span><span>${i.title}</span>
+            <span style="margin-left:auto;color:var(--muted)">+${i.impact} impact</span>
+          </div>`).join('')}
+          ${(r.skipped||[]).map(i=>`
+          <div style="font-size:0.65rem;color:var(--muted);display:flex;align-items:center;gap:5px">
+            <span>→</span><span>${i.title}</span>
+            <span style="margin-left:auto">${i.reason||''}</span>
+          </div>`).join('')}
+        </div>
+
+        ${r.notes ? `<div style="margin-top:8px;font-size:0.68rem;color:#94a3b8;font-style:italic">"${r.notes}"</div>` : ''}
+      </div>`).join('')}
+
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${[1,2,3].map(n => {
+          const done = rounds.find(r=>r.round===n);
+          return `<div style="flex:1;text-align:center;padding:6px;border-radius:6px;font-size:0.68rem;
+            background:${done?'rgba(236,72,153,0.12)':'var(--surface2)'};
+            border:1px solid ${done?'#ec4899':'var(--border)'};
+            color:${done?'#ec4899':'var(--muted)'}">
+            ${done?'🔁':'○'} Round ${n}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ── Auto Refresh ──
 async function refreshAll() {
   await loadState();
   await loadQAReports();
+  await loadReflexionReports();
 }
 setInterval(refreshAll, 5000);
 
 // ── Init ──
-loadState().then(loadQAReports);
+loadState().then(loadQAReports).then(loadReflexionReports);
 </script>
 </body>
 </html>

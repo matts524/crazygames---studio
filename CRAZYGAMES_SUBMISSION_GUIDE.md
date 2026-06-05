@@ -9,11 +9,11 @@ Once the repo is pushed, your games will be live at:
 
 | Game | GitHub Pages URL |
 |------|-----------------|
-| Gravity Flipper | https://matts524.github.io/crazygames-studio/games/gravity-flip/game.html |
-| Snake Chaos | https://matts524.github.io/crazygames-studio/games/snake-chaos/game.html |
-| Tower Collapse | https://matts524.github.io/crazygames-studio/games/tower-collapse/game.html |
-| Pixel Chef Rush | https://matts524.github.io/crazygames-studio/games/pixel-chef/game.html |
-| *(new games auto-added here)* | https://matts524.github.io/crazygames-studio/games/{id}/game.html |
+| Gravity Flipper | https://matts524.github.io/crazygames---studio/games/gravity-flip/game.html |
+| Snake Chaos | https://matts524.github.io/crazygames---studio/games/snake-chaos/game.html |
+| Tower Collapse | https://matts524.github.io/crazygames---studio/games/tower-collapse/game.html |
+| Pixel Chef Rush | https://matts524.github.io/crazygames---studio/games/pixel-chef/game.html |
+| *(new games auto-added here)* | https://matts524.github.io/crazygames---studio/games/{id}/game.html |
 
 ---
 
@@ -22,7 +22,7 @@ Once the repo is pushed, your games will be live at:
 ### Step 1 — Create the GitHub repo
 
 1. Go to https://github.com/new
-2. Repository name: `crazygames-studio`
+2. Repository name: `crazygames---studio`
 3. Set to **Public** (required for GitHub Pages)
 4. Do NOT add README or .gitignore — leave it empty
 5. Click **Create repository**
@@ -37,21 +37,21 @@ git init
 git add .
 git commit -m "Initial commit - game studio + Gravity Flipper"
 git branch -M main
-git remote add origin https://github.com/matts524/crazygames-studio.git
+git remote add origin https://github.com/matts524/crazygames---studio.git
 git push -u origin main
 ```
 
 ### Step 3 — Enable GitHub Pages
 
-1. Go to https://github.com/matts524/crazygames-studio/settings/pages
+1. Go to https://github.com/matts524/crazygames---studio/settings/pages
 2. Source: **Deploy from a branch**
 3. Branch: **main** | Folder: **/ (root)**
 4. Click **Save**
-5. Wait ~2 minutes — your site goes live at https://matts524.github.io/crazygames-studio/
+5. Wait ~2 minutes — your site goes live at https://matts524.github.io/crazygames---studio/
 
 ### Step 4 — Test the live URL
 
-Open in Chrome: https://matts524.github.io/crazygames-studio/games/gravity-flip/game.html
+Open in Chrome: https://matts524.github.io/crazygames---studio/games/gravity-flip/game.html
 - Confirm it loads (not 404)
 - Test on mobile too
 
@@ -61,7 +61,7 @@ Open in Chrome: https://matts524.github.io/crazygames-studio/games/gravity-flip/
 
 1. Go to https://developer.crazygames.com → **My Games** → **+ Add Game**
 2. Fill in:
-   - **Game URL**: `https://matts524.github.io/crazygames-studio/games/gravity-flip/game.html`
+   - **Game URL**: `https://matts524.github.io/crazygames---studio/games/gravity-flip/game.html`
    - **Title**: Gravity Flipper
    - **Description**: *"Tap to flip gravity and dodge the walls in this fast-paced one-button arcade game. How far can you go?"*
    - **Category**: Arcade
@@ -90,7 +90,7 @@ GitHub Pages auto-deploys within ~60 seconds. CrazyGames picks up changes within
 ## Note on imposter-grid repo
 
 You already have `matts524/imposter-grid` — that repo hosts one game.
-The new `crazygames-studio` repo will host ALL games in one place under `/games/`.
+The new `crazygames---studio` repo will host ALL games in one place under `/games/`.
 You can keep both — they're separate.
 
 ---

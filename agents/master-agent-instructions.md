@@ -42,6 +42,15 @@ Check each condition in order — act on the FIRST one that matches:
 ### Priority 2 — Run QA on completed builds
 - If any game has status `"build"`:
   → QA Agent: run full test suite, write report, update status
+  → If PASS: check reflexionCount (default 0). If < 3 and not reflexionComplete → set status `"reflexion"`. Else → set status `"shipped"`.
+
+### Priority 2b — Run Reflexion on QA-passed games
+- If any game has status `"reflexion"` AND `reflexionCount < 3` AND `reflexionComplete != true`:
+  → Reflexion Agent: follow agents/reflexion-agent.md
+  → Play game, score it, generate improvement candidates, implement top 3 by priority
+  → Write report to pipeline/reflexion/{id}-round-{n}.json
+  → Increment reflexionCount, set status back to `"build"` (triggers QA again)
+  → If reflexionCount reaches 3 OR score ≥ 9: set reflexionComplete = true, status = `"shipped"`
 
 ### Priority 3 — Build designed games
 - If any game has status `"design"`:

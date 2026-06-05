@@ -1,2 +1,5 @@
 @echo off
-start "" "C:\Users\matts\OneDrive\apps to maek\game-studio\iframe-test.html"
+echo Starting iframe Tester...
+cd /d "C:\Users\matts\OneDrive\apps to maek\game-studio"
+start "" "http://localhost:3502/iframe-test.html"
+npx serve -p 3502 .
