@@ -122,6 +122,55 @@ app.post('/api/queue', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── GET /api/tools ────────────────────────────────────────────
+app.get('/api/tools', (req, res) => {
+  try { res.json(readJSON('pipeline/tool-suggestions.json')); }
+  catch(e) { res.json({ tools: [] }); }
+});
+
+// ── POST /api/tool/approve/:id ────────────────────────────────
+app.post('/api/tool/approve/:id', (req, res) => {
+  const data  = readJSON('pipeline/tool-suggestions.json');
+  const tool  = data.tools.find(t => t.id === req.params.id);
+  if (!tool) return res.status(404).json({ error: 'Tool not found' });
+
+  tool.status     = 'approved';
+  tool.approvedAt = new Date().toISOString();
+  tool.integrationNotes = `Approved by user on ${new Date().toLocaleString()}. Integration will be applied on next build cycle.`;
+
+  writeJSON('pipeline/tool-suggestions.json', data);
+
+  // Log to state
+  const state = readJSON('pipeline/state.json');
+  logActivity(state, '✅', `Tool APPROVED: ${tool.name}`, `Will be integrated by Dev Agent on next build cycle`);
+  writeJSON('pipeline/state.json', state);
+
+  // Write integration trigger
+  fs.writeFileSync(path.join(ROOT, 'pipeline/.tool-approved'), tool.id);
+
+  res.json({ ok: true, tool });
+});
+
+// ── POST /api/tool/reject/:id ─────────────────────────────────
+app.post('/api/tool/reject/:id', (req, res) => {
+  const { reason } = req.body;
+  const data = readJSON('pipeline/tool-suggestions.json');
+  const tool = data.tools.find(t => t.id === req.params.id);
+  if (!tool) return res.status(404).json({ error: 'Tool not found' });
+
+  tool.status          = 'rejected';
+  tool.rejectedAt      = new Date().toISOString();
+  tool.rejectionReason = reason || 'No reason given';
+
+  writeJSON('pipeline/tool-suggestions.json', data);
+
+  const state = readJSON('pipeline/state.json');
+  logActivity(state, '❌', `Tool rejected: ${tool.name}`, reason || 'User declined');
+  writeJSON('pipeline/state.json', state);
+
+  res.json({ ok: true });
+});
+
 // ── Watch for build trigger ───────────────────────────────────
 // When .build-trigger file appears, run the build cycle
 const TRIGGER = path.join(ROOT, 'pipeline/.build-trigger');

@@ -604,6 +604,17 @@
       </div>
     </div>
 
+    <!-- Tool Scout -->
+    <div>
+      <div class="pipeline-header">
+        <div class="pipeline-title">🔭 Tool Scout — GitHub Discoveries</div>
+        <span style="font-size:0.72rem;color:var(--muted)">Review each tool — approve to integrate, reject to dismiss</span>
+      </div>
+      <div id="tool-scout-panel" style="display:flex;flex-direction:column;gap:14px">
+        <div style="color:var(--muted);font-size:0.78rem">Loading tool suggestions...</div>
+      </div>
+    </div>
+
     <!-- Timeline -->
     <div class="timeline-section">
       <div class="timeline-title">📋 Recent Activity</div>
@@ -1200,16 +1211,203 @@ function renderReflexionReports() {
   }).join('');
 }
 
+// ── Tool Scout ──
+let toolData = { tools: [] };
+
+const IMPORTANCE_CONFIG = {
+  critical:     { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',   badge: '🔴 CRITICAL',     sort: 0 },
+  important:    { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)',  badge: '🟡 IMPORTANT',    sort: 1 },
+  'nice-to-have':{ color: '#10b981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', badge: '🟢 NICE TO HAVE', sort: 2 },
+  experimental: { color: '#6366f1', bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.3)', badge: '🔵 EXPERIMENTAL', sort: 3 },
+};
+
+const AGENT_ICONS = { developer:'⚙️', qa:'🧪', designer:'🎨', researcher:'🔬', reflexion:'🔁', ideator:'💡' };
+
+async function loadTools() {
+  try {
+    const r = await fetch('/api/tools?' + Date.now());
+    if (r.ok) toolData = await r.json();
+  } catch(e) { /* server not running */ }
+  renderTools();
+}
+
+function renderTools() {
+  const el = document.getElementById('tool-scout-panel');
+  if (!el) return;
+  const tools = (toolData.tools || []).slice().sort((a,b) => {
+    const sa = IMPORTANCE_CONFIG[a.importance]?.sort ?? 9;
+    const sb = IMPORTANCE_CONFIG[b.importance]?.sort ?? 9;
+    return sa - sb;
+  });
+
+  const pending   = tools.filter(t => t.status === 'pending');
+  const approved  = tools.filter(t => t.status === 'approved' || t.status === 'integrated');
+  const rejected  = tools.filter(t => t.status === 'rejected');
+
+  if (tools.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.78rem">No tool suggestions yet — Tool Scout runs automatically every 3 games shipped.</div>`;
+    return;
+  }
+
+  let html = '';
+
+  if (pending.length > 0) {
+    html += `<div style="font-size:0.72rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">
+      ⏳ ${pending.length} awaiting your review
+    </div>`;
+    html += pending.map(t => renderToolCard(t, true)).join('');
+  }
+
+  if (approved.length > 0) {
+    html += `<div style="font-size:0.72rem;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin:12px 0 4px">
+      ✅ ${approved.length} approved
+    </div>`;
+    html += approved.map(t => renderToolCard(t, false)).join('');
+  }
+
+  if (rejected.length > 0) {
+    html += `<details style="margin-top:8px"><summary style="font-size:0.7rem;color:var(--muted);cursor:pointer">
+      ❌ ${rejected.length} rejected (click to view)
+    </summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+      ${rejected.map(t => renderToolCard(t, false)).join('')}
+    </div></details>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderToolCard(tool, showActions) {
+  const imp   = IMPORTANCE_CONFIG[tool.importance] || IMPORTANCE_CONFIG.experimental;
+  const agents = (tool.affectedAgents || []).map(a => `<span title="${a}">${AGENT_ICONS[a] || '🤖'}</span>`).join(' ');
+  const stars  = tool.stars >= 1000 ? `${(tool.stars/1000).toFixed(1)}k` : tool.stars;
+  const statusColor = tool.status==='approved'||tool.status==='integrated' ? 'var(--green)' : tool.status==='rejected' ? 'var(--muted)' : imp.color;
+  const opacity = tool.status === 'rejected' ? '0.5' : '1';
+
+  return `
+  <div style="
+    background:var(--surface);
+    border:1px solid ${imp.border};
+    border-left:4px solid ${imp.color};
+    border-radius:12px;padding:18px;
+    opacity:${opacity};
+    position:relative;
+  ">
+    <!-- Header row -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:0.95rem;font-weight:700">${tool.name}</span>
+          <span style="font-size:0.68rem;background:${imp.bg};color:${imp.color};border:1px solid ${imp.border};padding:2px 8px;border-radius:8px;font-weight:600">${imp.badge}</span>
+          ${tool.status !== 'pending' ? `<span style="font-size:0.65rem;color:${statusColor};font-weight:600">${tool.status.toUpperCase()}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:12px;font-size:0.68rem;color:var(--muted)">
+          <a href="${tool.githubUrl}" target="_blank" style="color:var(--accent);text-decoration:none">⭐ ${stars} · GitHub ↗</a>
+          <span>📄 ${tool.licence}</span>
+          <span>💾 ${tool.fileSize}</span>
+          <span>Affects: ${agents}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brief -->
+    <div style="font-size:0.82rem;color:#e2e8f0;margin-bottom:10px;line-height:1.5">${tool.brief}</div>
+
+    <!-- Expandable sections -->
+    <details style="margin-bottom:8px">
+      <summary style="font-size:0.72rem;color:var(--accent);cursor:pointer;font-weight:600">📋 Why it matters to this studio</summary>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.6;background:var(--surface2);border-radius:6px;padding:10px">${tool.whyItMatters}</div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="font-size:0.72rem;color:var(--green);cursor:pointer;font-weight:600">🚀 System benefits</summary>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${tool.systemBenefit}</div>
+    </details>
+
+    <details style="margin-bottom:${showActions ? '14px' : '0'}">
+      <summary style="font-size:0.72rem;color:var(--yellow);cursor:pointer;font-weight:600">🔧 How to integrate</summary>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${tool.integration}</div>
+    </details>
+
+    ${showActions ? `
+    <!-- Action buttons -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="approveTool('${tool.id}')" style="
+        flex:1;background:linear-gradient(135deg,var(--green),#059669);
+        border:none;border-radius:8px;color:white;padding:10px;
+        font-size:0.78rem;font-weight:700;cursor:pointer;letter-spacing:0.3px;
+      " onmouseenter="this.style.opacity=0.85" onmouseleave="this.style.opacity=1">
+        ✅ APPROVE — Integrate This Tool
+      </button>
+      <button onclick="rejectTool('${tool.id}')" style="
+        background:var(--surface2);border:1px solid var(--border);
+        border-radius:8px;color:var(--muted);padding:10px 16px;
+        font-size:0.75rem;cursor:pointer;transition:all 0.2s;
+      " onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+         onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        ❌ Reject
+      </button>
+    </div>` : tool.status === 'approved' ? `
+    <div style="font-size:0.7rem;color:var(--green);margin-top:4px">
+      ✅ Approved ${tool.approvedAt ? new Date(tool.approvedAt).toLocaleDateString() : ''} — will be integrated on next build cycle
+    </div>` : tool.status === 'rejected' ? `
+    <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">
+      Rejected${tool.rejectionReason ? ': ' + tool.rejectionReason : ''}
+    </div>` : ''}
+  </div>`;
+}
+
+async function approveTool(toolId) {
+  const tool = (toolData.tools || []).find(t => t.id === toolId);
+  if (!tool) return;
+  const btn = document.querySelector(`button[onclick="approveTool('${toolId}')"]`);
+  if (btn) { btn.textContent = '⏳ Approving...'; btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/tool/approve/${toolId}`, { method: 'POST', headers: {'Content-Type':'application/json'} });
+    if (r.ok) {
+      showToast(`✅ "${tool.name}" approved — will be integrated on next build cycle`, 'var(--green)');
+      await loadTools();
+    } else {
+      showToast('❌ Server error — is the dashboard server running?', 'var(--red)');
+    }
+  } catch(e) {
+    // Fallback: update locally
+    tool.status = 'approved';
+    tool.approvedAt = new Date().toISOString();
+    showToast(`✅ "${tool.name}" approved — tell Claude to integrate it`, 'var(--green)');
+    renderTools();
+  }
+}
+
+async function rejectTool(toolId) {
+  const tool = (toolData.tools || []).find(t => t.id === toolId);
+  if (!tool) return;
+  const reason = prompt(`Reason for rejecting "${tool.name}"? (optional — helps future suggestions)`);
+  try {
+    await fetch(`/api/tool/reject/${toolId}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ reason: reason || '' })
+    });
+    showToast(`"${tool.name}" dismissed`, 'var(--muted)');
+    await loadTools();
+  } catch(e) {
+    tool.status = 'rejected';
+    tool.rejectionReason = reason || '';
+    renderTools();
+  }
+}
+
 // ── Auto Refresh ──
 async function refreshAll() {
   await loadState();
   await loadQAReports();
   await loadReflexionReports();
+  await loadTools();
 }
 setInterval(refreshAll, 5000);
 
 // ── Init ──
-loadState().then(loadQAReports).then(loadReflexionReports);
+loadState().then(loadQAReports).then(loadReflexionReports).then(loadTools);
 </script>
 </body>
 </html>

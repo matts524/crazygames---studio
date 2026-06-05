@@ -10,6 +10,20 @@ This file defines how each agent operates within the pipeline. Claude reads this
 4. **build** → Agent writes the complete single-file HTML5 game (self-contained, no external deps)
 5. **qa** → Agent plays through the game mentally, checks for bugs, polishes, marks as shipped
 
+## Approved Tools (check before every build)
+
+Before writing any game code, read `pipeline/tool-suggestions.json` and check for tools with `status: "approved"`.
+For each approved tool, apply its integration instructions. Once integrated into a game, you do not need to re-read it for future games — the templates will already include it.
+
+Current tool status is tracked in `pipeline/tool-suggestions.json`. If a tool is approved:
+- **LittleJS** → use as game engine instead of hand-written physics/collision
+- **ZzFX** → use for all sound effects instead of raw Web Audio beep()
+- **ZzFXM** → add background music using the tracker format
+- **Playwright** → QA Agent uses browser tests instead of eval() hacks
+- **Piskel** → sprite designs can come from the visual editor
+
+---
+
 ## CrazyGames Requirements (always follow)
 - Single HTML file, self-contained (no CDN, no external assets unless fonts)
 - Mobile-friendly (touch controls)
