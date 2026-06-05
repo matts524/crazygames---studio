@@ -1371,70 +1371,125 @@ function renderToolCard(tool, showActions) {
   </div>`;
 }
 
-async function approveTool(toolId) {
+function approveTool(toolId) {
   const tool = (toolData.tools || []).find(t => t.id === toolId);
   if (!tool) return;
 
-  // Find and replace the approve button with a live progress log
-  const card = document.querySelector(`button[onclick="approveTool('${toolId}')"]`)?.closest('[style*="border-left:4px"]');
+  // Replace action buttons with the progress widget
+  const card = document.querySelector(`button[onclick="approveTool('${toolId}')"]`)
+               ?.closest('[style*="border-left:4px"]');
   const actionArea = card?.querySelector('[style*="display:flex;gap:8px"]');
-  if (actionArea) {
-    actionArea.innerHTML = `
-      <div id="progress-${toolId}" style="
-        width:100%;background:var(--surface2);border:1px solid var(--border);
-        border-radius:8px;padding:12px;font-size:0.72rem;
+  if (!actionArea) return;
+
+  actionArea.innerHTML = `
+    <div style="width:100%">
+      <!-- Stage label + percentage -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span id="stage-${toolId}" style="font-size:0.72rem;color:var(--yellow);font-weight:600">
+          ⏳ Starting integration…
+        </span>
+        <span id="pct-${toolId}" style="font-size:0.72rem;font-weight:700;color:var(--text)">0%</span>
+      </div>
+
+      <!-- Progress bar track -->
+      <div style="
+        width:100%;height:10px;background:var(--border);
+        border-radius:10px;overflow:hidden;margin-bottom:10px;
+        box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);
       ">
-        <div style="color:var(--yellow);font-weight:600;margin-bottom:6px">⏳ Integrating ${esc(tool.name)}...</div>
-        <div id="progress-log-${toolId}" style="color:var(--muted);line-height:1.8">Contacting server...</div>
-      </div>`;
+        <div id="bar-${toolId}" style="
+          width:0%;height:100%;border-radius:10px;
+          background:linear-gradient(90deg,#6366f1,#10b981);
+          transition:width 0.5s ease;
+          box-shadow:0 0 8px rgba(16,185,129,0.5);
+          position:relative;overflow:hidden;
+        ">
+          <!-- Shimmer sweep animation -->
+          <div style="
+            position:absolute;top:0;left:-100%;width:100%;height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);
+            animation:shimmer 1.2s infinite;
+          "></div>
+        </div>
+      </div>
+
+      <!-- Log lines -->
+      <div id="log-${toolId}" style="
+        font-size:0.68rem;color:var(--muted);
+        max-height:120px;overflow-y:auto;
+        line-height:1.8;
+      "></div>
+    </div>`;
+
+  // Inject shimmer keyframe once
+  if (!document.getElementById('shimmer-style')) {
+    const s = document.createElement('style');
+    s.id = 'shimmer-style';
+    s.textContent = '@keyframes shimmer{0%{left:-100%}100%{left:100%}}';
+    document.head.appendChild(s);
   }
 
-  const logEl = document.getElementById(`progress-log-${toolId}`);
-  const addLog = (line) => { if (logEl) logEl.innerHTML += (logEl.innerHTML ? '<br>' : '') + line; };
+  const barEl   = document.getElementById(`bar-${toolId}`);
+  const stageEl = document.getElementById(`stage-${toolId}`);
+  const pctEl   = document.getElementById(`pct-${toolId}`);
+  const logEl   = document.getElementById(`log-${toolId}`);
 
-  try {
-    addLog('📡 Sending approval to server...');
-    const r = await fetch(`/api/tool/approve/${toolId}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'}
-    });
-
-    if (r.ok) {
-      const result = await r.json();
-      (result.logs || []).forEach(l => addLog(l));
-
-      if (result.error) {
-        addLog(`⚠ ${result.error}`);
-        showToast(`⚠ "${tool.name}" approved with issues — check progress log`, 'var(--yellow)');
-      } else {
-        addLog(`<span style="color:var(--green);font-weight:600">✅ Integration complete!</span>`);
-        showToast(`✅ "${tool.name}" integrated! All future games will use it.`, 'var(--green)');
-      }
-      setTimeout(() => loadTools(), 1500);
-
-    } else {
-      // Server not running — show instructions
-      addLog('⚠ Server not running. To integrate tools:');
-      addLog('1. Close this dashboard');
-      addLog('2. Double-click <strong>OPEN DASHBOARD.bat</strong>');
-      addLog('3. Come back and click Approve again');
-      addLog('');
-      addLog('<em>The .bat file starts the full server with integration support.</em>');
+  const setProgress = (pct, stage, log) => {
+    if (barEl)   barEl.style.width = pct + '%';
+    if (pctEl)   pctEl.textContent = pct + '%';
+    if (stageEl) stageEl.textContent = stage;
+    if (logEl && log) {
+      const line = document.createElement('div');
+      line.innerHTML = log;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
     }
+  };
+
+  // Try SSE stream (requires server.js to be running)
+  try {
+    const es = new EventSource(`/api/tool/integrate-stream/${toolId}`);
+
+    es.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      setProgress(d.pct, d.stage, d.log);
+
+      if (d.done) {
+        es.close();
+        if (d.error) {
+          // Error state — bar goes red
+          if (barEl) barEl.style.background = 'linear-gradient(90deg,#ef4444,#f97316)';
+          if (stageEl) stageEl.style.color = 'var(--red)';
+          showToast(`⚠ Integration issue with "${tool.name}" — see log`, 'var(--yellow)');
+        } else {
+          // Success — bar goes solid green, label updates
+          if (barEl) { barEl.style.background = '#10b981'; barEl.querySelector('div').style.animation = 'none'; }
+          if (stageEl) { stageEl.textContent = `✅ ${tool.name} integrated!`; stageEl.style.color = 'var(--green)'; }
+          if (pctEl)   pctEl.style.color = 'var(--green)';
+          showToast(`✅ "${tool.name}" is now part of your studio!`, 'var(--green)');
+        }
+        setTimeout(() => loadTools(), 2000);
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      // SSE failed — server not running
+      actionArea.innerHTML = `
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);
+          border-radius:10px;padding:14px;font-size:0.75rem">
+          <div style="color:#f59e0b;font-weight:700;margin-bottom:8px">⚠ Full server required</div>
+          <div style="color:var(--muted);line-height:1.8">
+            Integration downloads tools automatically, but needs the full server running.<br><br>
+            <strong style="color:var(--text)">One-time fix:</strong><br>
+            1. Double-click <strong>OPEN DASHBOARD.bat</strong> (not the HTML file directly)<br>
+            2. Come back here and click Approve — it will download and integrate instantly
+          </div>
+        </div>`;
+    };
+
   } catch(e) {
-    // Server not reachable
-    if (actionArea) actionArea.innerHTML = `
-      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);
-        border-radius:8px;padding:12px;font-size:0.72rem;color:#f59e0b">
-        <strong>⚠ Server not running</strong><br><br>
-        To approve tools with automatic integration:<br>
-        <ol style="margin:8px 0 0 16px;line-height:2">
-          <li>Close this browser tab</li>
-          <li>Double-click <strong>OPEN DASHBOARD.bat</strong></li>
-          <li>The dashboard will re-open with the full server</li>
-          <li>Click Approve — it will download and integrate immediately</li>
-        </ol>
-      </div>`;
+    setProgress(0, 'Error', '❌ Could not connect to integration server');
   }
 }
 

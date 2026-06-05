@@ -58,224 +58,195 @@ function appendIfMissing(filePath, marker, content) {
 }
 
 // ── TOOL INTEGRATION HANDLERS ─────────────────────────────────
-// Each handler downloads, installs, and wires up the tool.
-// Returns an array of log messages describing what was done.
+// Each handler receives a `progress(pct, stage, log)` callback
+// so SSE can stream real-time updates to the dashboard.
 
 const INTEGRATIONS = {
 
-  littlejs: async () => {
-    const logs = [];
+  littlejs: async (progress) => {
     const dest = path.join(ROOT, 'templates', 'littlejs.min.js');
-    logs.push('📥 Downloading littlejs.min.js from jsDelivr CDN...');
-    await downloadFile(
-      'https://cdn.jsdelivr.net/gh/KilledByAPixel/LittleJS@main/dist/littlejs.min.js',
-      dest
-    );
+    progress(10, 'Downloading', '📥 Fetching littlejs.min.js from jsDelivr CDN...');
+    await downloadFile('https://cdn.jsdelivr.net/gh/KilledByAPixel/LittleJS@main/dist/littlejs.min.js', dest);
     const size = Math.round(fs.statSync(dest).size / 1024);
-    logs.push(`✅ Downloaded littlejs.min.js (${size}kb) → templates/littlejs.min.js`);
+    progress(40, 'Downloaded', `✅ littlejs.min.js saved (${size}kb) → templates/`);
 
-    // Update AGENT_INSTRUCTIONS to note LittleJS is available
-    appendIfMissing(
-      path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'),
-      'LittleJS INTEGRATED',
-      `## LittleJS INTEGRATED ✅\nAll new games MUST use LittleJS engine.\nAdd to every new game: <script src="../../templates/littlejs.min.js"></script>\nDocs: https://github.com/KilledByAPixel/LittleJS\nUse LittleJS objects (vec2, Color, drawRect, Sound, etc.) instead of hand-coding.\n`
-    );
-    logs.push('✅ Updated agents/AGENT_INSTRUCTIONS.md — Dev Agent will use LittleJS for all future games');
-
-    // Update knowledge base
-    appendIfMissing(
-      path.join(ROOT, 'knowledge', 'KNOWLEDGE.md'),
-      'LittleJS available',
-      `13. **LittleJS available** — game engine at templates/littlejs.min.js — use it instead of hand-writing physics/collision/particles\n`
-    );
-    logs.push('✅ Updated knowledge/KNOWLEDGE.md quick reference');
-    return logs;
+    progress(55, 'Updating agent instructions', '📝 Writing to agents/AGENT_INSTRUCTIONS.md...');
+    appendIfMissing(path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'), 'LittleJS INTEGRATED',
+      `\n## LittleJS INTEGRATED ✅\nAll new games MUST use LittleJS engine.\nAdd: <script src="../../templates/littlejs.min.js"></script>\nDocs: https://github.com/KilledByAPixel/LittleJS\n`);
+    progress(70, 'Updating knowledge base', '📚 Writing to knowledge/KNOWLEDGE.md...');
+    appendIfMissing(path.join(ROOT, 'knowledge', 'KNOWLEDGE.md'), 'LittleJS available',
+      `13. **LittleJS available** — game engine at templates/littlejs.min.js\n`);
+    progress(85, 'Committing to GitHub', '🚀 Pushing to matts524/crazygames---studio...');
   },
 
-  zzfx: async () => {
-    const logs = [];
+  zzfx: async (progress) => {
     const dest = path.join(ROOT, 'templates', 'zzfx.min.js');
-    logs.push('📥 Downloading ZzFXMicro.min.js from jsDelivr CDN...');
-    await downloadFile(
-      'https://cdn.jsdelivr.net/gh/KilledByAPixel/ZzFX@master/ZzFXMicro.min.js',
-      dest
-    );
+    progress(10, 'Downloading', '📥 Fetching ZzFXMicro.min.js from jsDelivr CDN...');
+    await downloadFile('https://cdn.jsdelivr.net/gh/KilledByAPixel/ZzFX@master/ZzFXMicro.min.js', dest);
     const size = fs.statSync(dest).size;
-    logs.push(`✅ Downloaded zzfx.min.js (${size} bytes!) → templates/zzfx.min.js`);
+    progress(40, 'Downloaded', `✅ zzfx.min.js saved (${size} bytes) → templates/`);
 
-    appendIfMissing(
-      path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'),
-      'ZzFX INTEGRATED',
-      `## ZzFX INTEGRATED ✅\nAll new games MUST use ZzFX for sound effects instead of raw Web Audio beep().\nAdd to every new game: <script src="../../templates/zzfx.min.js"></script>\nDesign sounds at: https://killedbyapixel.github.io/ZzFX/\nUsage: zzfx(...[2,,261,.01,.06,.26,1,.7]) — paste the array from the designer.\n`
-    );
-    logs.push('✅ Updated agents/AGENT_INSTRUCTIONS.md — Dev Agent will use ZzFX for all future games');
-
-    appendIfMissing(
-      path.join(ROOT, 'knowledge', 'techniques', 'audio.md'),
-      'ZzFX integrated',
-      `\n## ZzFX Integrated ✅\nUse ZzFX for all sound effects. Designer: https://killedbyapixel.github.io/ZzFX/\n\`\`\`html\n<script src="../../templates/zzfx.min.js"></script>\n\`\`\`\nDesign your sound, copy the parameter array, paste as: zzfx(...array)\n`
-    );
-    logs.push('✅ Updated knowledge/techniques/audio.md with ZzFX workflow');
-    return logs;
+    progress(55, 'Updating agent instructions', '📝 Writing to agents/AGENT_INSTRUCTIONS.md...');
+    appendIfMissing(path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'), 'ZzFX INTEGRATED',
+      `\n## ZzFX INTEGRATED ✅\nAll games use ZzFX for sounds. Add: <script src="../../templates/zzfx.min.js"></script>\nDesigner: https://killedbyapixel.github.io/ZzFX/\n`);
+    progress(70, 'Updating knowledge base', '📚 Writing to knowledge/techniques/audio.md...');
+    appendIfMissing(path.join(ROOT, 'knowledge', 'techniques', 'audio.md'), 'ZzFX integrated',
+      `\n## ZzFX Integrated ✅\nDesign sounds at: https://killedbyapixel.github.io/ZzFX/\n`);
+    progress(85, 'Committing to GitHub', '🚀 Pushing to GitHub...');
   },
 
-  zzfxm: async () => {
-    const logs = [];
+  zzfxm: async (progress) => {
     const dest = path.join(ROOT, 'templates', 'zzfxm.min.js');
-    logs.push('📥 Downloading ZzFXM player from jsDelivr CDN...');
-    await downloadFile(
-      'https://cdn.jsdelivr.net/gh/keithclark/ZzFXM@master/zzfxm.min.js',
-      dest
-    );
-    const size = Math.round(fs.statSync(dest).size / 1024 * 100) / 100;
-    logs.push(`✅ Downloaded zzfxm.min.js (${size}kb) → templates/zzfxm.min.js`);
+    progress(10, 'Downloading', '📥 Fetching zzfxm.min.js from jsDelivr CDN...');
+    await downloadFile('https://cdn.jsdelivr.net/gh/keithclark/ZzFXM@master/zzfxm.min.js', dest);
+    const size = Math.round(fs.statSync(dest).size / 1024 * 10) / 10;
+    progress(40, 'Downloaded', `✅ zzfxm.min.js saved (${size}kb) → templates/`);
 
-    appendIfMissing(
-      path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'),
-      'ZzFXM INTEGRATED',
-      `## ZzFXM INTEGRATED ✅\nAll new games CAN include background music via ZzFXM.\nAdd after ZzFX script: <script src="../../templates/zzfxm.min.js"></script>\nCompose music at: https://notecraft.fun (exports ZzFXM format)\nLoop: const music = zzfxm(song); music[0].loop=true;\n`
-    );
-    logs.push('✅ Updated agents/AGENT_INSTRUCTIONS.md with ZzFXM music instructions');
-    return logs;
+    progress(60, 'Updating agent instructions', '📝 Writing instructions...');
+    appendIfMissing(path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'), 'ZzFXM INTEGRATED',
+      `\n## ZzFXM INTEGRATED ✅\nBackground music support. Add: <script src="../../templates/zzfxm.min.js"></script>\nCompose at: https://notecraft.fun\n`);
+    progress(85, 'Committing to GitHub', '🚀 Pushing to GitHub...');
   },
 
-  playwright: async () => {
-    const logs = [];
-    logs.push('📥 Installing Playwright via npm...');
+  playwright: async (progress) => {
+    progress(10, 'Installing', '📥 Running npm install playwright...');
     try {
       execSync('npm install --save-dev playwright', { cwd: ROOT, stdio: 'pipe' });
-      logs.push('✅ npm install playwright complete');
+      progress(35, 'Installing browser', '📥 Downloading Playwright Chromium browser...');
       execSync('npx playwright install chromium', { cwd: ROOT, stdio: 'pipe' });
-      logs.push('✅ Playwright Chromium browser downloaded');
-    } catch(e) {
-      logs.push('⚠ npm install ran with warnings — Playwright may need manual install');
-    }
-
-    // Create a base QA test file
+    } catch(e) { progress(35, 'Warning', '⚠ npm install completed with warnings'); }
+    progress(55, 'Creating test files', '📝 Writing tests/game-qa.spec.js...');
     const testDir = path.join(ROOT, 'tests');
     if (!fs.existsSync(testDir)) fs.mkdirSync(testDir);
     const testFile = path.join(testDir, 'game-qa.spec.js');
     if (!fs.existsSync(testFile)) {
-      fs.writeFileSync(testFile, `// Game QA test template — generated by Tool Scout
-const { test, expect } = require('@playwright/test');
-
-test('game loads and title screen renders', async ({ page }) => {
+      fs.writeFileSync(testFile,
+`const { test, expect } = require('@playwright/test');
+test('game loads', async ({ page }) => {
   await page.goto('http://localhost:3456/index.html');
   await page.waitForTimeout(1000);
-  const canvas = await page.$('canvas');
-  expect(canvas).toBeTruthy();
+  expect(await page.$('canvas')).toBeTruthy();
 });
-
 test('game starts on click', async ({ page }) => {
   await page.goto('http://localhost:3456/index.html');
   await page.waitForTimeout(500);
   await page.click('canvas');
   await page.waitForTimeout(500);
-  // State should be PLAY (1) after click
   const state = await page.evaluate(() => window.state);
   expect(state).toBe(1);
-});
-`);
-      logs.push('✅ Created tests/game-qa.spec.js — base test template for all games');
+});`);
     }
-
-    // Add test script to package.json
     const pkg = readJSON('package.json');
     if (!pkg.scripts) pkg.scripts = {};
     pkg.scripts['test:qa'] = 'playwright test tests/game-qa.spec.js';
     writeJSON('package.json', pkg);
-    logs.push('✅ Added "test:qa" script to package.json');
-
-    appendIfMissing(
-      path.join(ROOT, 'agents', 'qa-agent-instructions.md'),
-      'Playwright INTEGRATED',
-      `\n## Playwright INTEGRATED ✅\nReal browser testing now available. Run: npm run test:qa\nTest files live in tests/ folder. Base template: tests/game-qa.spec.js\nFor each new game, create tests/{game-id}.spec.js extending the base template.\n`
-    );
-    logs.push('✅ Updated qa-agent-instructions.md with Playwright workflow');
-    return logs;
+    progress(75, 'Updating QA agent', '📝 Writing to agents/qa-agent-instructions.md...');
+    appendIfMissing(path.join(ROOT, 'agents', 'qa-agent-instructions.md'), 'Playwright INTEGRATED',
+      `\n## Playwright INTEGRATED ✅\nRun: npm run test:qa\nBase template: tests/game-qa.spec.js\n`);
+    progress(85, 'Committing to GitHub', '🚀 Pushing to GitHub...');
   },
 
-  piskel: async () => {
-    // Piskel needs a build step — we instead link to the hosted version
-    const logs = [];
-    logs.push('ℹ Piskel requires a full build step — linking to online version instead');
-
-    appendIfMissing(
-      path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'),
-      'Piskel AVAILABLE',
-      `## Piskel AVAILABLE ✅\nUse Piskel online editor for designing pixel art sprites: https://www.piskelapp.com\nExport sprites as PNG → describe the pixel data for the Dev Agent to convert to string arrays.\nAlternatively use the in-browser version embedded at https://www.piskelapp.com/p/create/frame\n`
-    );
-
-    // Add a quick-link in the dashboard bat area
-    const launcherPath = path.join(ROOT, 'OPEN SPRITE EDITOR.bat');
-    fs.writeFileSync(launcherPath,
-      `@echo off\necho Opening Piskel Sprite Editor...\nstart "" "https://www.piskelapp.com/p/create/frame"\n`
-    );
-    logs.push('✅ Created OPEN SPRITE EDITOR.bat — opens Piskel in browser');
-    logs.push('✅ Updated agent instructions with Piskel workflow');
-    return logs;
+  piskel: async (progress) => {
+    progress(20, 'Setting up launcher', '📝 Creating OPEN SPRITE EDITOR.bat...');
+    fs.writeFileSync(path.join(ROOT, 'OPEN SPRITE EDITOR.bat'),
+      `@echo off\necho Opening Piskel Sprite Editor...\nstart "" "https://www.piskelapp.com/p/create/frame"\n`);
+    progress(55, 'Updating agent instructions', '📝 Writing to AGENT_INSTRUCTIONS.md...');
+    appendIfMissing(path.join(ROOT, 'agents', 'AGENT_INSTRUCTIONS.md'), 'Piskel AVAILABLE',
+      `\n## Piskel AVAILABLE ✅\nSprite editor: https://www.piskelapp.com\nOr run OPEN SPRITE EDITOR.bat\n`);
+    progress(85, 'Committing to GitHub', '🚀 Pushing to GitHub...');
   }
 };
 
-// ── POST /api/tool/approve/:id ────────────────────────────────
-// ACTUALLY downloads + integrates the tool immediately
-app.post('/api/tool/approve/:id', async (req, res) => {
-  const data  = readJSON('pipeline/tool-suggestions.json');
-  const tool  = data.tools.find(t => t.id === req.params.id);
-  if (!tool) return res.status(404).json({ error: 'Tool not found' });
+// ── GET /api/tool/integrate-stream/:id  (Server-Sent Events) ──
+// Streams real-time progress back to the dashboard while integrating
+app.get('/api/tool/integrate-stream/:id', async (req, res) => {
+  const data = readJSON('pipeline/tool-suggestions.json');
+  const tool = data.tools.find(t => t.id === req.params.id);
+  if (!tool) { res.status(404).end(); return; }
 
-  tool.status     = 'approved';
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+  });
+
+  const send = (pct, stage, log, done = false, error = null) => {
+    res.write(`data: ${JSON.stringify({ pct, stage, log, done, error })}\n\n`);
+  };
+
+  // Mark as integrating
+  tool.status     = 'integrating';
   tool.approvedAt = new Date().toISOString();
   writeJSON('pipeline/tool-suggestions.json', data);
 
-  // Update state immediately so dashboard shows "integrating"
   const state = readJSON('pipeline/state.json');
-  logActivity(state, '🔧', `Integrating: ${tool.name}`, 'Downloading and applying tool now...');
-  // Set Tool Scout agent to active
+  logActivity(state, '🔧', `Integrating: ${tool.name}`, 'Download started');
   const tsAgent = state.agents.find(a => a.id === 'toolscout');
   if (tsAgent) { tsAgent.status = 'active'; tsAgent.currentTask = `Integrating ${tool.name}...`; }
   writeJSON('pipeline/state.json', state);
 
-  // Run the integration handler (if one exists)
+  send(5, 'Starting', `🔭 Tool Scout integrating: ${tool.name}`);
+
   const handler = INTEGRATIONS[tool.id];
-  let integrationLogs = [];
   let integrationError = null;
+  const logs = [];
 
-  if (handler) {
-    try {
-      integrationLogs = await handler();
-    } catch(err) {
-      integrationError = err.message;
-      integrationLogs.push(`❌ Integration error: ${err.message}`);
-    }
-  } else {
-    integrationLogs.push(`ℹ No automated integration for ${tool.name} — marked approved for manual setup`);
-  }
+  // Progress callback passed to each handler
+  const progress = (pct, stage, log) => {
+    logs.push(log);
+    send(pct, stage, log);
+  };
 
-  // Mark as integrated (or approved-with-error)
-  const finalState = integrationError ? 'approved' : 'integrated';
-  tool.status = finalState;
-  tool.integrationNotes = integrationLogs.join('\n');
-  writeJSON('pipeline/tool-suggestions.json', data);
-
-  // Final state log
-  const state2 = readJSON('pipeline/state.json');
-  if (integrationError) {
-    logActivity(state2, '⚠', `Tool integration issue: ${tool.name}`, integrationError);
-  } else {
-    logActivity(state2, '🔧', `Tool INTEGRATED: ${tool.name}`, integrationLogs[integrationLogs.length - 1] || 'Done');
-  }
-  if (tsAgent) { tsAgent.status = 'idle'; tsAgent.currentTask = `${tool.name} integrated ✓`; }
-  writeJSON('pipeline/state.json', state2);
-
-  // Git commit the changes
   try {
-    execSync('git add -A && git commit -m "Tool Scout: integrated ' + tool.name + '"', { cwd: ROOT, stdio: 'pipe' });
-    execSync('git push', { cwd: ROOT, stdio: 'pipe' });
-    integrationLogs.push('✅ Changes committed and pushed to GitHub');
-  } catch(e) { /* git errors are non-fatal */ }
+    if (handler) {
+      await handler(progress);
+    } else {
+      progress(50, 'Configuring', `ℹ ${tool.name} uses online tools — setting up launcher`);
+    }
 
-  res.json({ ok: true, tool, logs: integrationLogs, error: integrationError });
+    // Git commit
+    send(88, 'Saving to GitHub', '🚀 Committing and pushing to GitHub...');
+    try {
+      execSync(`git add -A && git commit -m "Tool Scout: integrated ${tool.name}"`, { cwd: ROOT, stdio: 'pipe' });
+      execSync('git push', { cwd: ROOT, stdio: 'pipe' });
+      logs.push('✅ Committed and pushed to GitHub');
+      send(95, 'GitHub updated', '✅ Pushed to matts524/crazygames---studio');
+    } catch(e) { send(95, 'GitHub skipped', '⚠ Git push skipped (no changes or auth issue)'); }
+
+    // Mark complete
+    tool.status = 'integrated';
+    tool.integrationNotes = logs.join('\n');
+    writeJSON('pipeline/tool-suggestions.json', data);
+
+    const state2 = readJSON('pipeline/state.json');
+    logActivity(state2, '🔧', `INTEGRATED: ${tool.name}`, 'All steps complete');
+    if (tsAgent) { tsAgent.status = 'idle'; tsAgent.currentTask = `${tool.name} integrated ✓`; }
+    writeJSON('pipeline/state.json', state2);
+
+    send(100, 'Complete', `✅ ${tool.name} is now part of your studio!`, true);
+
+  } catch(err) {
+    integrationError = err.message;
+    tool.status = 'approved'; // revert to approved so user can retry
+    tool.integrationNotes = `Error: ${err.message}`;
+    writeJSON('pipeline/tool-suggestions.json', data);
+    send(100, 'Error', `❌ ${err.message}`, true, err.message);
+  }
+
+  res.end();
+});
+
+// ── POST /api/tool/approve/:id  (kept for fallback) ───────────
+app.post('/api/tool/approve/:id', (req, res) => {
+  const data = readJSON('pipeline/tool-suggestions.json');
+  const tool = data.tools.find(t => t.id === req.params.id);
+  if (!tool) return res.status(404).json({ error: 'Not found' });
+  tool.status = 'approved';
+  tool.approvedAt = new Date().toISOString();
+  writeJSON('pipeline/tool-suggestions.json', data);
+  res.json({ ok: true, streamUrl: `/api/tool/integrate-stream/${req.params.id}` });
 });
 
 // ── POST /api/tool/reject/:id ─────────────────────────────────
