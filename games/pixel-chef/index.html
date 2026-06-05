@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pixel Chef Rush</title>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#1a0a00; display:flex; align-items:center; justify-content:center; height:100vh; overflow:hidden; touch-action:none; }
+  canvas { display:block; image-rendering:pixelated; cursor:pointer; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ── Canvas setup ──────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const W = 400, H = 580;
+let scale = 1;
+
+function resize() {
+  scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.width  = W; canvas.height = H;
+  canvas.style.width  = W * scale + 'px';
+  canvas.style.height = H * scale + 'px';
+  ctx.imageSmoothingEnabled = false;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Audio ─────────────────────────────────────────────────────
+let ac;
+function ensureAC() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); }
+function beep(freq, dur, type='sine', vol=0.3) {
+  if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+  o.start(); o.stop(ac.currentTime + dur);
+}
+function sfxPop()     { beep(440, 0.06, 'sine', 0.25); }
+function sfxCorrect() { [523,659,784].forEach((f,i) => setTimeout(()=>beep(f,0.12,'sine',0.3), i*100)); }
+function sfxWrong()   { beep(200, 0.3, 'sawtooth', 0.3); }
+function sfxExpire()  { beep(880, 0.08); setTimeout(()=>beep(440,0.2,'sawtooth',0.2),80); }
+function sfxLevelUp() { [523,587,659,698,784].forEach((f,i)=>setTimeout(()=>beep(f,0.1,'sine',0.25),i*80)); }
+
+// ── CrazyGames SDK ────────────────────────────────────────────
+(async()=>{ try { await window.CrazyGames?.SDK?.init(); } catch(e){} })();
+function cgStart() { try { window.CrazyGames?.SDK?.game?.gameplayStart(); } catch(e){} }
+function cgStop()  { try { window.CrazyGames?.SDK?.game?.gameplayStop();  } catch(e){} }
+
+// ── Data ──────────────────────────────────────────────────────
+const INGREDIENTS = [
+  { id:'bun',   label:'Bun',    color:'#d4a56a', dark:'#a0784a', icon:'B' },
+  { id:'patty', label:'Patty',  color:'#8b4513', dark:'#5a2d0c', icon:'P' },
+  { id:'rice',  label:'Rice',   color:'#f5f5dc', dark:'#c8c89a', icon:'R' },
+  { id:'fish',  label:'Fish',   color:'#5599cc', dark:'#3366aa', icon:'F' },
+  { id:'scoop', label:'Scoop',  color:'#ffb3c6', dark:'#cc8099', icon:'S' },
+];
+
+const RECIPES = [
+  { name:'Classic Burger',   emoji:'🍔', ing:['bun','patty'],              level:1 },
+  { name:'Fish Taco',        emoji:'🌮', ing:['rice','fish'],              level:1 },
+  { name:'Ice Cream Bun',    emoji:'🍦', ing:['scoop','bun'],              level:2 },
+  { name:'Sushi Stack',      emoji:'🍱', ing:['rice','fish','rice'],       level:2 },
+  { name:'Double Patty',     emoji:'🥩', ing:['patty','patty','bun'],     level:3 },
+  { name:'Frozen Burger',    emoji:'🥶', ing:['bun','patty','scoop'],      level:3 },
+  { name:'Rainbow Roll',     emoji:'🌈', ing:['fish','scoop','rice'],      level:4 },
+  { name:'Double Trouble',   emoji:'😈', ing:['patty','bun','patty'],     level:4 },
+  { name:"The Mistake",      emoji:'🤯', ing:['rice','patty','fish','scoop'], level:5 },
+  { name:"Chef's Madness",   emoji:'🎲', ing:['bun','fish','scoop','patty'],  level:5 },
+];
+
+function recipesForLevel(lvl) { return RECIPES.filter(r => r.level <= lvl); }
+
+// ── State ─────────────────────────────────────────────────────
+const STATES = { TITLE:0, PLAY:1, LEVELUP:2, DEAD:3 };
+let state = STATES.TITLE;
+let score, hearts, level, ordersCompleted;
+let orders, plate, particles;
+let orderTimer, levelUpTimer;
+let bestScore = parseInt(localStorage.getItem('pcr_best')) || 0;
+let deathCount = 0;
+
+// Station rects (bottom row)
+const STATION_Y = H - 90;
+const STATION_W = 56, STATION_H = 56;
+const stations = INGREDIENTS.map((ing, i) => ({
+  ...ing,
+  x: 12 + i * 62,
+  y: STATION_Y,
+  w: STATION_W, h: STATION_H,
+  anim: 0,
+}));
+const SERVE_BTN = { x: W - 80, y: STATION_Y, w: 68, h: STATION_H };
+
+// Order slot positions
+const ORDER_SLOTS = [
+  { x: 8,   y: 44, w: 118, h: 90 },
+  { x: 140, y: 44, w: 118, h: 90 },
+  { x: 272, y: 44, w: 118, h: 90 },
+];
+
+function getTimer() { return Math.max(7, 13 - level); }
+function maxOrders() { return level < 2 ? 1 : level < 4 ? 2 : 3; }
+
+function newOrder() {
+  const pool = recipesForLevel(level);
+  const recipe = pool[Math.floor(Math.random() * pool.length)];
+  return { recipe, timeLeft: getTimer(), maxTime: getTimer(), active: false };
+}
+
+function init() {
+  score = 0; hearts = 3; level = 1; ordersCompleted = 0;
+  orders = [newOrder()];
+  plate  = [];
+  particles = [];
+  orderTimer = 0;
+  cgStart();
+}
+
+// ── Particles ─────────────────────────────────────────────────
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    const a = (i/8)*Math.PI*2;
+    particles.push({ x, y, vx: Math.cos(a)*2.5, vy: Math.sin(a)*2.5, life:1, color });
+  }
+}
+
+// ── Update ────────────────────────────────────────────────────
+let lastT = 0;
+function update(dt) {
+  if (state !== STATES.PLAY) return;
+  const t = dt / 16.67;
+
+  // Tick orders
+  orders.forEach((ord, i) => {
+    ord.timeLeft -= (dt / 1000);
+    if (ord.timeLeft <= 0) {
+      hearts--;
+      sfxExpire();
+      spawnParticles(ORDER_SLOTS[i].x + 59, ORDER_SLOTS[i].y + 45, '#ef4444');
+      orders[i] = newOrder();
+      if (hearts <= 0) { state = STATES.DEAD; cgStop(); bestScore = Math.max(bestScore, score); localStorage.setItem('pcr_best', bestScore); }
+    }
+  });
+
+  // Spawn new orders
+  if (orders.length < maxOrders()) {
+    orderTimer -= dt;
+    if (orderTimer <= 0) { orders.push(newOrder()); orderTimer = 3000; }
+  }
+
+  // Station animations
+  stations.forEach(s => { if (s.anim > 0) s.anim = Math.max(0, s.anim - 0.1 * t); });
+
+  // Particles
+  particles = particles.filter(p => {
+    p.x += p.vx * t; p.y += p.vy * t; p.vy += 0.15 * t; p.life -= 0.04 * t;
+    return p.life > 0;
+  });
+
+  // Level up check
+  const newLevel = 1 + Math.floor(ordersCompleted / 5);
+  if (newLevel > level) {
+    level = newLevel;
+    state = STATES.LEVELUP;
+    levelUpTimer = 100;
+    sfxLevelUp();
+  }
+}
+
+// ── Draw helpers ──────────────────────────────────────────────
+function px(text, x, y, size=10, color='#fff', align='left') {
+  ctx.font = `bold ${size}px 'Courier New', monospace`;
+  ctx.textAlign = align;
+  ctx.fillStyle = '#000';
+  ctx.fillText(text, x+1, y+1);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  ctx.textAlign = 'left';
+}
+
+function drawPixelIngredient(id, cx, cy, size=18) {
+  const ing = INGREDIENTS.find(i => i.id === id);
+  if (!ing) return;
+  ctx.fillStyle = ing.color;
+  switch(id) {
+    case 'bun':
+      // round top
+      ctx.beginPath(); ctx.ellipse(cx, cy-size*0.2, size*0.8, size*0.5, 0, Math.PI, 0); ctx.fill();
+      ctx.fillRect(cx-size*0.8, cy-size*0.1, size*1.6, size*0.4);
+      break;
+    case 'patty':
+      ctx.fillStyle = ing.dark;
+      ctx.fillRect(cx-size*0.8, cy-size*0.25, size*1.6, size*0.5);
+      ctx.fillStyle = ing.color;
+      ctx.fillRect(cx-size*0.7, cy-size*0.2, size*1.4, size*0.4);
+      break;
+    case 'rice':
+      ctx.fillStyle = ing.color;
+      ctx.fillRect(cx-size*0.7, cy-size*0.3, size*1.4, size*0.6);
+      ctx.fillStyle = ing.dark;
+      for (let rx=-2;rx<=2;rx++) for(let ry=-1;ry<=1;ry++) {
+        ctx.fillRect(cx+rx*size*0.2, cy+ry*size*0.2, 3, 3);
+      }
+      break;
+    case 'fish':
+      ctx.fillStyle = ing.color;
+      ctx.beginPath();
+      ctx.moveTo(cx-size, cy); ctx.lineTo(cx+size*0.6, cy-size*0.4);
+      ctx.lineTo(cx+size*0.6, cy+size*0.4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = ing.dark;
+      ctx.beginPath(); ctx.arc(cx-size*0.2, cy, size*0.15, 0, Math.PI*2); ctx.fill();
+      // tail
+      ctx.fillStyle = ing.color;
+      ctx.beginPath(); ctx.moveTo(cx+size*0.6, cy); ctx.lineTo(cx+size, cy-size*0.4); ctx.lineTo(cx+size, cy+size*0.4); ctx.closePath(); ctx.fill();
+      break;
+    case 'scoop':
+      ctx.fillStyle = ing.color;
+      ctx.beginPath(); ctx.arc(cx, cy-size*0.2, size*0.6, Math.PI, 0); ctx.fill();
+      ctx.fillRect(cx-size*0.15, cy-size*0.2, size*0.3, size*0.6);
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(cx-size*0.15, cy-size*0.35, size*0.12, 0, Math.PI*2); ctx.fill();
+      break;
+  }
+}
+
+function drawStation(s) {
+  const sc = 1 + s.anim * 0.3;
+  ctx.save();
+  ctx.translate(s.x + s.w/2, s.y + s.h/2);
+  ctx.scale(sc, sc);
+  // panel
+  ctx.fillStyle = '#3d2b1a';
+  roundRect(-s.w/2, -s.h/2, s.w, s.h, 6);
+  ctx.fill();
+  ctx.strokeStyle = '#6b4c2a';
+  ctx.lineWidth = 2;
+  roundRect(-s.w/2, -s.h/2, s.w, s.h, 6);
+  ctx.stroke();
+  // ingredient icon
+  drawPixelIngredient(s.id, 0, -4, 14);
+  // label
+  ctx.font = 'bold 8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c8a87a';
+  ctx.fillText(s.label, 0, s.h/2 - 6);
+  ctx.restore();
+}
+
+function drawServeBtn(active) {
+  const b = SERVE_BTN;
+  ctx.fillStyle = active ? '#10b981' : '#1e4d3a';
+  roundRect(b.x, b.y, b.w, b.h, 8);
+  ctx.fill();
+  ctx.strokeStyle = active ? '#34d399' : '#2d6b52';
+  ctx.lineWidth = 2;
+  roundRect(b.x, b.y, b.w, b.h, 8);
+  ctx.stroke();
+  px('SERVE', b.x + b.w/2, b.y + b.h/2 - 5, 9, active ? '#fff' : '#4a8a6a', 'center');
+  px('▶', b.x + b.w/2, b.y + b.h/2 + 8, 9, active ? '#fff' : '#4a8a6a', 'center');
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+function drawOrder(ord, slot, idx) {
+  const { x, y, w, h } = slot;
+  // card bg
+  const isActive = ord === orders.find(o => o.active) || true;
+  ctx.fillStyle = '#2a1a0a';
+  roundRect(x, y, w, h, 6); ctx.fill();
+  ctx.strokeStyle = '#6b4c2a';
+  ctx.lineWidth = 1.5;
+  roundRect(x, y, w, h, 6); ctx.stroke();
+
+  // timer bar
+  const ratio = ord.timeLeft / ord.maxTime;
+  const barColor = ratio > 0.5 ? '#10b981' : ratio > 0.25 ? '#f59e0b' : '#ef4444';
+  ctx.fillStyle = '#1a0e06';
+  ctx.fillRect(x+4, y+h-10, w-8, 6);
+  ctx.fillStyle = barColor;
+  ctx.fillRect(x+4, y+h-10, (w-8)*ratio, 6);
+
+  // recipe name
+  px(ord.recipe.name.slice(0,13), x+w/2, y+12, 7, '#f5deb3', 'center');
+
+  // ingredient icons small
+  const ings = ord.recipe.ing;
+  const iconW = Math.min(22, (w-8) / ings.length);
+  ings.forEach((id, i) => {
+    drawPixelIngredient(id, x + 10 + i * iconW + iconW/2, y + 50, 9);
+  });
+}
+
+function drawPlate() {
+  // Plate area
+  const px2 = 80, py = 148, pw = 240, ph = 160;
+  ctx.fillStyle = '#2a1a0a';
+  roundRect(px2, py, pw, ph, 12); ctx.fill();
+  ctx.strokeStyle = '#6b4c2a';
+  ctx.lineWidth = 2;
+  roundRect(px2, py, pw, ph, 12); ctx.stroke();
+
+  if (plate.length === 0) {
+    px('Tap ingredient', W/2, py + ph/2 - 5, 9, '#4a3020', 'center');
+    px('stations below', W/2, py + ph/2 + 8, 9, '#4a3020', 'center');
+  }
+
+  // Draw stacked ingredients
+  const stackH = 30;
+  const startY = py + ph - 16;
+  plate.forEach((id, i) => {
+    drawPixelIngredient(id, W/2, startY - i * stackH, 16);
+  });
+
+  // Label
+  px('PLATE', W/2, py + 14, 8, '#6b4c2a', 'center');
+  if (plate.length > 0) px(`${plate.length} ing`, W/2, py + ph - 20, 7, '#8b6940', 'center');
+}
+
+function drawHUD() {
+  // Background strip
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(0, 0, W, 40);
+  ctx.fillStyle = '#3d2000';
+  ctx.fillRect(0, 38, W, 2);
+
+  // Hearts
+  for (let i = 0; i < 3; i++) {
+    px(i < hearts ? '❤' : '🖤', 10 + i * 22, 28, 14, '#ef4444');
+  }
+
+  // Title
+  px('PIXEL CHEF RUSH', W/2, 26, 10, '#f59e0b', 'center');
+
+  // Score
+  px(`${score}`, W-10, 26, 12, '#ffd700', 'right');
+
+  // Level
+  px(`LVL${level}`, W-10, 38, 7, '#f59e0b', 'right');
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x-3, p.y-3, 6, 6);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawTitle() {
+  // Kitchen bg
+  drawKitchenBg();
+
+  // Title box
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  roundRect(30, 100, W-60, 260, 16); ctx.fill();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 3;
+  roundRect(30, 100, W-60, 260, 16); ctx.stroke();
+
+  // Chef emoji
+  ctx.font = '64px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('👨‍🍳', W/2, 190);
+
+  px('PIXEL CHEF', W/2, 230, 22, '#f59e0b', 'center');
+  px('RUSH', W/2, 258, 22, '#fff', 'center');
+
+  px('Click ingredients in order,', W/2, 290, 9, '#c8a87a', 'center');
+  px('then SERVE to complete orders!', W/2, 305, 9, '#c8a87a', 'center');
+
+  if (Math.floor(Date.now()/600) % 2 === 0)
+    px('TAP TO START', W/2, 340, 13, '#10b981', 'center');
+
+  if (bestScore > 0) px(`Best: ${bestScore}`, W/2, 365, 9, '#6b4c2a', 'center');
+}
+
+function drawKitchenBg() {
+  // Floor tiles
+  for (let tx = 0; tx < W; tx += 40) for (let ty = 0; ty < H; ty += 40) {
+    ctx.fillStyle = (tx/40 + ty/40) % 2 === 0 ? '#2d1b0e' : '#251508';
+    ctx.fillRect(tx, ty, 40, 40);
+  }
+  // Counter top
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(0, H - 105, W, 8);
+  ctx.fillStyle = '#6b4c0a';
+  ctx.fillRect(0, H - 105, W, 3);
+}
+
+function drawGame() {
+  drawKitchenBg();
+
+  // Order area bg
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(0, 40, W, 100);
+  ctx.fillStyle = '#3d2000';
+  ctx.fillRect(0, 138, W, 2);
+
+  // Orders
+  orders.forEach((ord, i) => drawOrder(ord, ORDER_SLOTS[i], i));
+
+  // Plate
+  drawPlate();
+
+  // Stations
+  stations.forEach(s => drawStation(s));
+
+  // Serve button (active if plate matches any order)
+  const canServe = plate.length > 0 && orders.some(o => plateMatchesOrder(o));
+  drawServeBtn(canServe);
+
+  // HUD (drawn last so it's on top)
+  drawHUD();
+
+  drawParticles();
+}
+
+function drawDead() {
+  drawGame();
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = '48px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🍳', W/2, 160);
+
+  px('KITCHEN CLOSED', W/2, 210, 18, '#ef4444', 'center');
+  px(`Score: ${score}`, W/2, 245, 14, '#fff', 'center');
+  px(`Best: ${bestScore}`, W/2, 268, 10, '#f59e0b', 'center');
+  px(`Orders: ${ordersCompleted}`, W/2, 288, 10, '#c8a87a', 'center');
+
+  const stars = score < 5 ? 1 : score < 15 ? 2 : 3;
+  ctx.font = '28px serif';
+  ctx.fillText('⭐'.repeat(stars), W/2, 325);
+
+  if (Math.floor(Date.now()/700) % 2 === 0)
+    px('TAP TO PLAY AGAIN', W/2, 370, 12, '#10b981', 'center');
+}
+
+function drawLevelUp() {
+  drawGame();
+  ctx.fillStyle = `rgba(0,0,0,${0.7 * (levelUpTimer/100)})`;
+  ctx.fillRect(0, 0, W, H);
+  const s = 1 + (1 - levelUpTimer/100) * 0.5;
+  ctx.save(); ctx.translate(W/2, H/2); ctx.scale(s, s);
+  px('LEVEL UP!', 0, -10, 28, '#f59e0b', 'center');
+  px(`Level ${level}`, 0, 24, 16, '#fff', 'center');
+  ctx.restore();
+}
+
+// ── Match logic ────────────────────────────────────────────────
+function plateMatchesOrder(ord) {
+  const ing = ord.recipe.ing;
+  if (plate.length !== ing.length) return false;
+  return ing.every((id, i) => id === plate[i]);
+}
+
+function tryServe() {
+  const idx = orders.findIndex(o => plateMatchesOrder(o));
+  if (idx !== -1) {
+    const ord = orders[idx];
+    const bonus = Math.ceil(ord.timeLeft / ord.maxTime * 5);
+    score += 10 + bonus;
+    ordersCompleted++;
+    sfxCorrect();
+    spawnParticles(W/2, H/2, '#10b981');
+    orders[idx] = newOrder();
+    plate = [];
+  } else {
+    // Wrong — lose a heart
+    hearts--;
+    sfxWrong();
+    spawnParticles(W/2, STATION_Y + 28, '#ef4444');
+    plate = [];
+    if (hearts <= 0) {
+      state = STATES.DEAD;
+      cgStop();
+      bestScore = Math.max(bestScore, score);
+      localStorage.setItem('pcr_best', bestScore);
+    }
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────────
+function getCanvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (cx - r.left) / scale, y: (cy - r.top) / scale };
+}
+
+function handleTap(pos) {
+  ensureAC();
+  if (state === STATES.TITLE) { state = STATES.PLAY; init(); return; }
+  if (state === STATES.DEAD)  { state = STATES.PLAY; init(); return; }
+  if (state === STATES.LEVELUP) return;
+  if (state !== STATES.PLAY) return;
+
+  const { x, y } = pos;
+
+  // Check stations
+  for (const s of stations) {
+    if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) {
+      if (plate.length >= 4) { sfxWrong(); return; }
+      plate.push(s.id);
+      s.anim = 1;
+      sfxPop();
+      return;
+    }
+  }
+
+  // Check serve button
+  const b = SERVE_BTN;
+  if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+    if (plate.length > 0) tryServe();
+    return;
+  }
+}
+
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); handleTap(getCanvasPos(e)); });
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') handleTap({ x: -1, y: -1 });
+  if (e.key >= '1' && e.key <= '5') {
+    const idx = parseInt(e.key) - 1;
+    if (stations[idx] && state === STATES.PLAY) {
+      if (plate.length < 4) { plate.push(stations[idx].id); stations[idx].anim = 1; sfxPop(); }
+    }
+  }
+  if (e.code === 'Enter' && state === STATES.PLAY && plate.length > 0) tryServe();
+});
+
+// ── Game loop ─────────────────────────────────────────────────
+let _rafId;
+function _loop(ts) {
+  _rafId = requestAnimationFrame(_loop);
+  const dt = Math.min(ts - lastT, 50); lastT = ts;
+  if (state === STATES.LEVELUP) {
+    levelUpTimer--;
+    if (levelUpTimer <= 0) state = STATES.PLAY;
+  }
+  update(dt);
+  if      (state === STATES.TITLE)   drawTitle();
+  else if (state === STATES.PLAY)    drawGame();
+  else if (state === STATES.DEAD)    drawDead();
+  else if (state === STATES.LEVELUP) drawLevelUp();
+}
+window.pauseLoop  = () => { cancelAnimationFrame(_rafId); };
+window.resumeLoop = () => { _rafId = requestAnimationFrame(_loop); };
+requestAnimationFrame(ts => { lastT = ts; _rafId = requestAnimationFrame(_loop); });
+</script>
+</body>
+</html>

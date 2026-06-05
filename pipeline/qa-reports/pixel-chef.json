@@ -1,0 +1,24 @@
+{
+  "gameId": "pixel-chef",
+  "gameTitle": "Pixel Chef Rush",
+  "testedAt": "2026-06-05T09:22:00Z",
+  "verdict": "PASS",
+  "retryCount": 0,
+  "criticalTests": [
+    { "test": "LOAD",             "result": "PASS", "detail": "Canvas present, title 'Pixel Chef Rush', script loaded" },
+    { "test": "TITLE_RENDERS",    "result": "PASS", "detail": "state=TITLE(0), 5 stations, 10 recipes, canvas 400x580" },
+    { "test": "GAME_STARTS",      "result": "PASS", "detail": "handleTap → state=PLAY, 1 order spawned, empty plate" },
+    { "test": "ORDERS_SPAWN",     "result": "PASS", "detail": "First order: Classic Burger [bun, patty], timer running" },
+    { "test": "PLATE_FILLS",      "result": "PASS", "detail": "Clicking stations adds ingredients to plate array correctly" },
+    { "test": "PLATE_MATCHES",    "result": "PASS", "detail": "plateMatchesOrder() returns true for correct combo" },
+    { "test": "SERVE_WORKS",      "result": "PASS", "detail": "Score 0→15, plate cleared, order replaced" },
+    { "test": "DEATH_WORKS",      "result": "PASS", "detail": "Expired order with 1 heart → state=DEAD(3)" },
+    { "test": "RESTART_WORKS",    "result": "PASS", "detail": "handleTap on DEAD → state=PLAY(1), full reinit" },
+    { "test": "BEST_SCORE",       "result": "PASS", "detail": "bestScore=15 saved to localStorage key 'pcr_best'" }
+  ],
+  "warnings": [],
+  "passedTests": ["LOAD","TITLE_RENDERS","GAME_STARTS","ORDERS_SPAWN","PLATE_FILLS","PLATE_MATCHES","SERVE_WORKS","DEATH_WORKS","RESTART_WORKS","BEST_SCORE"],
+  "failedTests": [],
+  "devFeedback": null,
+  "shipRecommendation": "SHIP — 10/10 critical tests passed. Zero retries. CrazyGames-ready."
+}

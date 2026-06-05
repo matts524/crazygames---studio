@@ -692,21 +692,6 @@ async function loadState() {
 }
 
 // ── Studio Toggle ──
-async function toggleStudio() {
-  const running = studioState.studioRunning !== false;
-  studioState.studioRunning = !running;
-  updateToggleUI(studioState.studioRunning);
-
-  // Write new state back to state.json via a small fetch POST isn't possible
-  // from a static file server — instead we update visually and note that
-  // the agent reads studioRunning from state.json on each cycle start.
-  // User must save manually OR agent writes it. Show instruction.
-  const msg = studioState.studioRunning
-    ? '▶ Studio RESUMED — agents will run on next cycle'
-    : '⏸ Studio PAUSED — current cycle will finish, then agents stop';
-  showToast(msg, studioState.studioRunning ? 'var(--green)' : 'var(--yellow)');
-}
-
 function updateToggleUI(running) {
   const btn   = document.getElementById('studio-toggle');
   const icon  = document.getElementById('toggle-icon');
@@ -821,32 +806,68 @@ function renderIdeasGrid() {
   }).join('');
 }
 
-function approveBuild(gameId) {
+async function approveBuild(gameId) {
   const game = (queueData.ideas || []).find(g => g.id === gameId);
   if (!game) return;
-  showToast(`▶ "${game.title}" approved — tell Claude to run next cycle to start building`, 'var(--green)');
-  // Mark visually — actual queue update happens when Claude runs the cycle
-  const cards = document.querySelectorAll('#ideas-grid > div');
-  cards.forEach(card => {
-    if (card.querySelector('button[onclick*="' + gameId + '"]')) {
-      card.style.borderColor = 'var(--green)';
-      card.style.opacity = '0.6';
-      card.querySelector('button[onclick*="approveBuild"]').textContent = '✅ Queued — tell Claude to build';
-      card.querySelector('button[onclick*="approveBuild"]').disabled = true;
+
+  // Immediately show building state in UI
+  const btn = document.querySelector(`button[onclick="approveBuild('${gameId}')"]`);
+  if (btn) { btn.textContent = '⏳ Starting...'; btn.disabled = true; }
+
+  try {
+    const res = await fetch(`/api/approve/${gameId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artStyle: game.artStyle })
+    });
+
+    if (res.ok) {
+      showToast(`🚀 "${game.title}" is now in the pipeline!`, 'var(--green)');
+      // Immediately refresh data so kanban updates
+      await refreshAll();
+    } else {
+      showToast(`❌ Server error — is the server running?`, 'var(--red)');
+      if (btn) { btn.textContent = '▶ Build This'; btn.disabled = false; }
     }
-  });
-  // Store in sessionStorage so Claude can read the instruction
-  const pending = JSON.parse(sessionStorage.getItem('buildQueue') || '[]');
-  pending.push(gameId);
-  sessionStorage.setItem('buildQueue', JSON.stringify(pending));
+  } catch(e) {
+    // Server not running — show helpful message
+    showToast(`⚠ Server offline — open OPEN DASHBOARD.bat to start it`, 'var(--yellow)');
+    if (btn) { btn.textContent = '▶ Build This'; btn.disabled = false; }
+  }
 }
 
-function changeStyle(gameId) {
+async function changeStyle(gameId) {
   const styles = Object.keys(ART_STYLES);
   const names  = styles.map(s => ART_STYLES[s].icon + ' ' + ART_STYLES[s].label).join('\n');
   const choice = prompt('Choose art style:\n\n' + names + '\n\nType one of: ' + styles.join(', '));
-  if (choice && ART_STYLES[choice]) {
-    showToast(`Art style changed to ${ART_STYLES[choice].label} — tell Claude to apply this`, 'var(--purple)');
+  if (!choice || !ART_STYLES[choice]) return;
+
+  const game = (queueData.ideas || []).find(g => g.id === gameId);
+  if (game) game.artStyle = choice;
+
+  try {
+    await fetch('/api/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(queueData)
+    });
+    showToast(`🎨 Art style set to ${ART_STYLES[choice].label}`, 'var(--purple)');
+    renderIdeasGrid();
+  } catch(e) {
+    showToast(`🎨 Style noted — will apply when server is running`, 'var(--purple)');
+  }
+}
+
+async function toggleStudio() {
+  const running = studioState.studioRunning !== false;
+  try {
+    await fetch(running ? '/api/pause' : '/api/resume', { method: 'POST' });
+    await refreshAll();
+  } catch(e) {
+    // fallback: just update locally
+    studioState.studioRunning = !running;
+    updateToggleUI(studioState.studioRunning);
+    showToast(studioState.studioRunning ? '▶ Studio resumed' : '⏸ Studio paused', 'var(--yellow)');
   }
 }
 
