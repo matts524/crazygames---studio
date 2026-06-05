@@ -185,3 +185,8 @@ Icons: 💡 idea, 🔬 research, 🎨 design, ⚙️ build, 🧪 qa, ✅ done, �
 ## Piskel AVAILABLE ✅
 Sprite editor: https://www.piskelapp.com
 Or run OPEN SPRITE EDITOR.bat
+
+
+## ZzFXM INTEGRATED ✅
+Background music support. Add: <script src="../../templates/zzfxm.min.js"></script>
+Compose at: https://notecraft.fun
