@@ -36,6 +36,18 @@ Every new game MUST include LittleJS instead of hand-writing engine code:
 - `cameraPos`, `cameraScale` — camera control
 - `vec2(canvas.width, canvas.height)` → use `mainCanvasSize` instead
 
+**⚠ CRITICAL: Do NOT pass undefined/null as the tileset parameter**
+Passing `undefined` as the 6th param hangs the engine silently.
+Set background colour using `setCanvasClearColor()` BEFORE `engineInit`, not as a param.
+```javascript
+// ✅ CORRECT
+setCanvasClearColor(new Color(0.04, 0.04, 0.12));
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+
+// ❌ WRONG — hangs silently
+engineInit(gameInit, gameUpdate, null, gameRender, null, undefined, '#070710');
+```
+
 **Standard LittleJS game structure:**
 ```javascript
 // Add after <script src="../../templates/littlejs.min.js"></script>
@@ -77,10 +89,45 @@ class Player extends EngineObject {
 
 ---
 
+---
+
+## 🔊 ZzFX — INTEGRATED
+**File:** `templates/zzfx.min.js` (1.2kb, downloaded 2026-06-05)
+**Designer:** https://killedbyapixel.github.io/ZzFX/ — design sounds visually, copy the array
+**Docs:** https://github.com/KilledByAPixel/ZzFX
+
+Every new game MUST use ZzFX for sound instead of raw Web Audio `beep()`:
+```html
+<script src="../../templates/zzfx.min.js"></script>
+```
+
+**Usage — one line per sound:**
+```javascript
+// Design your sound at https://killedbyapixel.github.io/ZzFX/
+// Copy the parameter array and paste it here:
+zzfx(...[2,,261,.01,.06,.26,1,.7,,,,,,1.2,,.1,,,.93,.06]);  // example jump sound
+
+// Or store as variables:
+const sndJump  = [2,,261,.01,.06,.26,1,.7,,,,,,1.2,,.1,,,.93,.06];
+const sndCoin  = [1.5,,880,.01,.05,.1,1,2];
+const sndDie   = [1,,200,.1,.2,.5,4,.5];
+const sndClick = [.5,,1200,.01,.02,.05,1,3];
+
+// Play:
+zzfx(...sndJump);
+```
+
+**NOTE: If LittleJS is also used,** it already has ZzFX built-in. Use `new Sound([...])` instead:
+```javascript
+const sndJump = new Sound([2,,261,.01,.06,.26,1,.7]);
+sndJump.play(playerPos);  // positional audio!
+```
+
+---
+
 ## Other Approved Tools (check before every build)
 
 Other tools tracked in `pipeline/tool-suggestions.json`:
-- **ZzFX** → if integrated: use for sound effects
 - **ZzFXM** → if integrated: add background music
 - **Playwright** → if integrated: QA Agent uses browser tests
 - **Piskel** → if integrated: use for sprite design

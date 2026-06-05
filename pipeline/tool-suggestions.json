@@ -39,12 +39,12 @@
       "systemBenefit": "• All game sounds go from 'functional beeps' to 'real game audio'\n• Dev Agent uses ZzFX designer URL to find sounds, then pastes 1-line parameter arrays\n• No audio files = still CrazyGames-compliant and fast-loading\n• Designer URL: https://killedbyapixel.github.io/ZzFX/\n• Sound examples available in LittleJS (synergy if both approved)\n• QA Agent can verify sounds trigger correctly via eval checks",
       "integration": "1. Add ZzFXMicro.min.js (310 bytes!) to templates/ folder\n2. Add <script src='../../templates/zzfx.min.js'> to all new game templates\n3. Replace all beep() calls in AGENT_INSTRUCTIONS with ZzFX parameter array format\n4. Update knowledge/techniques/audio.md with ZzFX designer workflow\n5. Optional: update Gravity Flipper + Pixel Chef Rush audio (not required)",
       "affectedAgents": ["developer"],
-      "status": "pending",
+      "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
-      "approvedAt": null,
+      "approvedAt": "2026-06-05T14:57:00Z",
       "rejectedAt": null,
       "rejectionReason": null,
-      "integrationNotes": null
+      "integrationNotes": "✅ Downloaded ZzFXMicro.min.js (1.2kb) → templates/zzfx.min.js\n✅ Updated agents/AGENT_INSTRUCTIONS.md with ZzFX usage + LittleJS Sound() synergy note\n✅ Updated knowledge/KNOWLEDGE.md\n✅ Committed and pushed to GitHub\n\nNote: When using LittleJS, use new Sound([...]) instead — ZzFX is built into LittleJS."
     },
     {
       "id": "playwright",
