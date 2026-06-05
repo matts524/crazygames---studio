@@ -34,21 +34,6 @@
       "crazygamesCategory": "Arcade",
       "estimatedBuildTime": "2-3 hours",
       "researchNote": "IO games are CrazyGames' highest traffic category. Shell Shockers = most played. Solo IO-lite = zero multiplayer infra needed, same feel."
-    },
-    {
-      "id": "stack-master",
-      "title": "Stack Master",
-      "concept": "A block swings left-right on a pendulum — tap to drop it onto the stack below. Overhang gets cut off. Stack 30 blocks perfectly for a bonus tower",
-      "genre": "arcade",
-      "status": "idea",
-      "approved": false,
-      "artStyle": "minimalist",
-      "priority": 8,
-      "createdAt": "2026-06-05T00:00:00Z",
-      "tags": ["stacking","timing","arcade","minimalist","one-tap"],
-      "crazygamesCategory": "Arcade",
-      "estimatedBuildTime": "2-3 hours",
-      "researchNote": "Stacking mechanic is trending. One-tap timing = proven hypercasual formula. Clean minimalist look = strong thumbnail contrast."
     }
   ],
   "inProgress": [],
@@ -73,6 +58,17 @@
       "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/pixel-chef/index.html",
       "iframeTestPassed": true, "crazygamesSubmitted": false,
       "completedAt": "2026-06-05T09:22:00Z"
+    },
+    {
+      "id": "stack-master", "title": "Stack Master",
+      "concept": "A block swings left-right on a pendulum — tap to drop it onto the stack below. Overhang gets cut off. Stack 30 blocks perfectly for a bonus tower",
+      "genre": "arcade", "status": "shipped", "approved": true, "artStyle": "minimalist", "progress": 100,
+      "tags": ["stacking","timing","arcade","minimalist","one-tap"], "crazygamesCategory": "Arcade",
+      "gameFile": "./games/stack-master/index.html",
+      "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/stack-master/index.html",
+      "qaScore": 8.1, "iframeTestPassed": true, "crazygamesSubmitted": false,
+      "completedAt": "2026-06-05T15:18:00Z",
+      "notableFeatures": "LittleJS engine (first game), ZzFX sounds (perfect timing), pendulum physics, streak system"
     }
   ]
 }

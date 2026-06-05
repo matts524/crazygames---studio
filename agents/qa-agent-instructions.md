@@ -131,3 +131,8 @@ After QA writes its report:
    write `devFeedback` into game object in queue.json so Dev Agent sees it on next cycle
 4. Dev Agent on next cycle: reads `devFeedback`, opens `games/{id}/game.html`, applies fixes
 5. Set status back to `"build"` and trigger QA again
+
+
+## Playwright INTEGRATED ✅
+Run: npm run test:qa
+Base template: tests/game-qa.spec.js

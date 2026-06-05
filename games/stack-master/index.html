@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Stack Master</title>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+</head>
+<body>
+<script src="../../templates/littlejs.min.js"></script>
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════════
+//  STACK MASTER  —  Game Studio
+//  Built with LittleJS engine + ZzFX sounds (both integrated)
+// ════════════════════════════════════════════════════════════
+
+// ── CrazyGames SDK ───────────────────────────────────────────
+(async()=>{ try{ await window.CrazyGames?.SDK?.init(); }catch(e){} })();
+let deathCount = 0;
+function cgStart(){ try{ window.CrazyGames?.SDK?.game?.gameplayStart(); }catch(e){} }
+function cgStop() { try{ window.CrazyGames?.SDK?.game?.gameplayStop();  }catch(e){} }
+
+// ── Sounds (LittleJS ZzFX built-in) ─────────────────────────
+const sndDrop    = new Sound([1,,120,.01,.05,.05,4,0,,,,,,,.1]);
+const sndPerfect = new Sound([1.5,,880,.01,.05,.1,1,2,,,,,,1]);
+const sndCut     = new Sound([.5,,400,.01,.02,.04,3,3]);
+const sndDie     = new Sound([1,,300,.1,.2,.5,4,.5]);
+const sndStreak  = new Sound([1,,600,.01,.03,.05,1,3]);
+
+// ── Palette ──────────────────────────────────────────────────
+const PALETTE = [
+  new Color(0.39, 0.63, 0.93),  // blue
+  new Color(0.39, 0.78, 0.59),  // green
+  new Color(0.93, 0.59, 0.39),  // orange
+  new Color(0.78, 0.39, 0.93),  // purple
+  new Color(0.93, 0.78, 0.39),  // gold
+  new Color(0.39, 0.93, 0.88),  // cyan
+];
+
+// ── Game constants ────────────────────────────────────────────
+const BLOCK_H       = 0.55;
+const BLOCK_START_W = 7;
+const PERFECT_TOL   = 0.18;   // units tolerance for perfect land
+const STACK_BOTTOM  = -4;
+
+// ── State ─────────────────────────────────────────────────────
+const ST = { TITLE:0, PLAY:1, DEAD:2 };
+let gameState;
+let stackBlocks;         // array of {x, y, w, color}
+let swingBlock;          // the falling block object
+let swingSpeed, swingRange, swingDir;
+let score, streak, bestScore, blockCount;
+let perfectMsg, perfectMsgTimer;
+let camTargetY;
+let deathFade;
+
+bestScore = +localStorage.getItem('sm_best') || 0;
+
+// ── Block class ───────────────────────────────────────────────
+class StackBlock extends EngineObject {
+  constructor(x, y, w, col) {
+    super(vec2(x, y), vec2(w, BLOCK_H));
+    this.color       = col;
+    this.gravityScale = 0;
+    this.mass        = 0;
+  }
+  render() {
+    // Shadow
+    drawRect(this.pos.add(vec2(0.07, -0.07)), this.size, new Color(0,0,0,0.25));
+    // Block
+    drawRect(this.pos, this.size, this.color);
+    // Highlight
+    drawRect(this.pos.add(vec2(0, this.size.y*0.35)),
+             vec2(this.size.x * 0.9, this.size.y * 0.12),
+             new Color(1,1,1,0.18));
+  }
+}
+
+class SwingBlock extends EngineObject {
+  constructor(stackTop, stackX, stackW) {
+    const w = stackW;
+    const y = stackTop + BLOCK_H * 2.5;
+    super(vec2(stackX, y), vec2(w, BLOCK_H));
+    this.color       = PALETTE[blockCount % PALETTE.length];
+    this.gravityScale = 0;
+    this.mass        = 0;
+    this.baseY       = y;
+    this.baseX       = stackX;
+    this.dropped     = false;
+    this.dropVel     = 0;
+    this.swingPhase  = rand(Math.PI * 2); // random start phase
+  }
+  update() {
+    if (!this.dropped) {
+      // Pendulum swing
+      this.pos.x = this.baseX + Math.sin(time * swingSpeed + this.swingPhase) * swingRange;
+    } else {
+      // Fall straight down
+      this.dropVel -= 0.04;
+      this.pos.y   += this.dropVel;
+      // Land on stack top
+      const top = stackBlocks.length > 0
+        ? stackBlocks[stackBlocks.length - 1].pos.y + BLOCK_H
+        : STACK_BOTTOM;
+      if (this.pos.y - BLOCK_H/2 <= top) {
+        this.pos.y = top + BLOCK_H/2;
+        landBlock(this);
+      }
+    }
+  }
+  render() {
+    // Glow effect
+    drawRect(this.pos, this.size.add(vec2(0.08)), this.color.lerp(new Color(1,1,1),0.3));
+    drawRect(this.pos, this.size, this.color);
+    drawRect(this.pos.add(vec2(0, this.size.y*0.35)),
+             vec2(this.size.x * 0.9, this.size.y * 0.12),
+             new Color(1,1,1,0.25));
+  }
+}
+
+// ── Landing logic ─────────────────────────────────────────────
+function landBlock(block) {
+  const stackTop  = stackBlocks[stackBlocks.length - 1];
+  const stackX    = stackTop ? stackTop.pos.x : 0;
+  const stackW    = stackTop ? stackTop.size.x : BLOCK_START_W;
+
+  const leftEdge  = stackX - stackW/2;
+  const rightEdge = stackX + stackW/2;
+  const bLeft     = block.pos.x - block.size.x/2;
+  const bRight    = block.pos.x + block.size.x/2;
+
+  // Overlap
+  const overlapL  = Math.max(leftEdge,  bLeft);
+  const overlapR  = Math.min(rightEdge, bRight);
+  const newW      = overlapR - overlapL;
+
+  if (newW <= 0.3) {
+    // Missed — game over
+    sndDie.play(block.pos);
+    block.destroy();
+    endGame();
+    return;
+  }
+
+  const newX    = (overlapL + overlapR) / 2;
+  const diff    = Math.abs(block.pos.x - stackX);
+  const perfect = diff < PERFECT_TOL;
+
+  if (perfect) {
+    // Perfect land — keep full width
+    streak++;
+    const bonus = 25 * Math.min(streak, 4);
+    score += bonus;
+    blockCount++;
+    sndPerfect.play(block.pos);
+    if (streak > 1) sndStreak.play(block.pos);
+    // Gold particle burst
+    new ParticleEmitter(block.pos, 0, 0.8, 0.2, 25, PI,
+      new Color(1,0.9,0.1), new Color(1,0.6,0,0.5), 0,0,0.6,0.15,0.15,1,1);
+    new ParticleEmitter(block.pos, 0, 0.3, 0.1, 10, PI,
+      new Color(1,1,1), new Color(1,1,1,0), 0,0,0.4,0.08,0.1,1,1);
+    perfectMsg      = streak > 2 ? `${streak}x STREAK!` : 'PERFECT!';
+    perfectMsgTimer = 0.7;
+    // Place block at exactly stack position
+    const nb = new StackBlock(stackX, block.pos.y, stackTop ? stackTop.size.x : BLOCK_START_W,
+                              block.color);
+    stackBlocks.push(nb);
+  } else {
+    // Normal land — cut overhang
+    streak = 0;
+    score += 10;
+    blockCount++;
+    sndDrop.play(block.pos);
+    // Particle for cut-off piece
+    const cutW = block.size.x - newW;
+    if (cutW > 0.1) {
+      sndCut.play(vec2(bRight, block.pos.y));
+      new ParticleEmitter(
+        vec2(bRight > rightEdge ? (overlapR + bRight)/2 : (bLeft + overlapL)/2, block.pos.y),
+        0, 0.4, 0.1, 8, PI,
+        block.color, block.color.lerp(new Color(0,0,0), 0.5), 0,0,0.4,0.1,0.1,1,1
+      );
+    }
+    const nb = new StackBlock(newX, block.pos.y, newW, block.color);
+    stackBlocks.push(nb);
+  }
+
+  block.destroy();
+  spawnSwingBlock();
+  updateCamera();
+
+  // Increase difficulty every 5 blocks
+  if (blockCount % 5 === 0) {
+    swingSpeed = Math.min(3.5, swingSpeed + 0.1);
+    swingRange = Math.max(1.5, swingRange - 0.15);
+  }
+}
+
+function spawnSwingBlock() {
+  const top    = stackBlocks[stackBlocks.length - 1];
+  const topY   = top ? top.pos.y + BLOCK_H/2 : STACK_BOTTOM;
+  const topX   = top ? top.pos.x : 0;
+  const topW   = top ? top.size.x : BLOCK_START_W;
+  swingBlock   = new SwingBlock(topY, topX, topW);
+}
+
+function updateCamera() {
+  const top = stackBlocks[stackBlocks.length - 1];
+  if (top) camTargetY = top.pos.y + 3;
+}
+
+function endGame() {
+  gameState   = ST.DEAD;
+  deathFade   = 0;
+  bestScore   = Math.max(bestScore, score);
+  localStorage.setItem('sm_best', bestScore);
+  cgStop();
+  deathCount++;
+  if (deathCount % 3 === 0) {
+    try { window.CrazyGames?.SDK?.ad?.showAd('midgame'); } catch(e){}
+  }
+}
+
+// ── Input ──────────────────────────────────────────────────────
+function handleTap() {
+  if (gameState === ST.TITLE || gameState === ST.DEAD) {
+    gameState = ST.PLAY;
+    initGame();
+    return;
+  }
+  if (gameState === ST.PLAY && swingBlock && !swingBlock.dropped) {
+    swingBlock.dropped = true;
+  }
+}
+
+// ── LittleJS hooks ─────────────────────────────────────────────
+function gameInit() {
+  gameState = ST.TITLE;
+  cameraScale = 60;
+  cameraPos   = vec2(0, 0);
+}
+
+function initGame() {
+  engineObjectsDestroy();
+  stackBlocks    = [];
+  swingBlock     = null;
+  score          = 0;
+  streak         = 0;
+  blockCount     = 0;
+  swingSpeed     = 1.6;
+  swingRange     = 3.8;
+  perfectMsg     = '';
+  perfectMsgTimer = 0;
+  camTargetY     = 0;
+  deathFade      = 0;
+
+  // Base block
+  const base = new StackBlock(0, STACK_BOTTOM, BLOCK_START_W, PALETTE[0]);
+  stackBlocks.push(base);
+  spawnSwingBlock();
+  cgStart();
+}
+
+function gameUpdate() {
+  if (keyWasPressed('Space') || mouseWasPressed(0)) handleTap();
+
+  if (gameState === ST.PLAY) {
+    // Smooth camera
+    cameraPos.y += (camTargetY - cameraPos.y) * 0.08;
+    if (perfectMsgTimer > 0) perfectMsgTimer -= timeDelta;
+    if (deathFade < 1) deathFade = 0; // reset on play
+  }
+  if (gameState === ST.DEAD) {
+    deathFade = Math.min(1, deathFade + timeDelta * 2);
+    cameraPos.y += (camTargetY - cameraPos.y) * 0.03;
+  }
+}
+
+function gameUpdatePost() {}
+
+function gameRender() {
+  // Gradient background — darker at bottom
+  for (let y = -10; y < 14; y++) {
+    const t   = (y + 10) / 24;
+    const col = new Color(0.04, 0.04, 0.10 + t * 0.06);
+    drawRect(vec2(0, y - cameraPos.y + cameraPos.y), vec2(20, 1.05), col);
+  }
+
+  // Grid lines (subtle)
+  for (let y = -20; y < 40; y++) {
+    drawRect(vec2(0, y), vec2(16, 0.02), new Color(1,1,1,0.03));
+  }
+
+  // Draw stack labels (height markers every 5)
+  for (let i = 0; i <= stackBlocks.length; i += 5) {
+    if (i === 0) continue;
+    const y = STACK_BOTTOM + i * BLOCK_H + BLOCK_H/2;
+    drawText(i+'', vec2(-5.5, y), 0.3, new Color(1,1,1,0.15));
+  }
+}
+
+function gameRenderPost() {
+  if (gameState === ST.TITLE) {
+    drawText('STACK MASTER', vec2(0, 2), 0.85, new Color(1,1,1), 0.09);
+    drawText('tap to drop the block', vec2(0, 1.1), 0.38, new Color(1,1,1,0.5), 0.05);
+    drawText('land perfectly for bonus!', vec2(0, 0.6), 0.35, new Color(1,0.9,0.2,0.6), 0.05);
+    if (bestScore > 0)
+      drawText('best: '+bestScore, vec2(0, -0.2), 0.35, new Color(0.6,0.6,0.8,0.6), 0.04);
+    drawText(Math.floor(time*2)%2===0 ? 'TAP TO START' : '',
+             vec2(0,-0.9), 0.42, new Color(0.4,0.9,0.6), 0.05);
+    return;
+  }
+
+  // Score + streak HUD
+  drawText(''+score, vec2(0, 4.2), 0.65, new Color(1,1,1,0.92), 0.08);
+  if (streak >= 2)
+    drawText('🔥 '+streak+'x', vec2(3.5, 4.2), 0.38, new Color(1,0.8,0.1,0.9), 0.05);
+  drawText('h:'+blockCount, vec2(-4.5, 4.2), 0.32, new Color(1,1,1,0.35), 0.04);
+
+  // Perfect message
+  if (perfectMsgTimer > 0) {
+    const a = Math.min(1, perfectMsgTimer * 3);
+    const s = 0.6 + (0.7 - perfectMsgTimer) * 0.3;
+    drawText(perfectMsg, vec2(0, 2.8), s, new Color(1,0.92,0.1,a), 0.07);
+  }
+
+  if (gameState === ST.DEAD) {
+    const a = deathFade;
+    drawRect(vec2(0,0), vec2(20,20), new Color(0,0,0,a*0.6));
+    if (a > 0.5) {
+      const aa = (a - 0.5) * 2;
+      drawText('GAME OVER', vec2(0, 1.5), 0.9, new Color(1,0.3,0.3,aa), 0.1);
+      drawText('score: '+score, vec2(0, 0.5), 0.55, new Color(1,1,1,aa), 0.07);
+      drawText('height: '+blockCount, vec2(0, -0.1), 0.4, new Color(0.7,0.7,1,aa), 0.05);
+      drawText('best: '+bestScore, vec2(0, -0.6), 0.38, new Color(1,0.85,0.2,aa*0.8), 0.05);
+      if (Math.floor(time*1.5)%2===0)
+        drawText('TAP TO RETRY', vec2(0, -1.4), 0.42, new Color(0.4,0.9,0.6,aa), 0.05);
+    }
+  }
+}
+
+// ── Start ─────────────────────────────────────────────────────
+setCanvasClearColor(new Color(0.04, 0.04, 0.10));
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+</script>
+</body>
+</html>

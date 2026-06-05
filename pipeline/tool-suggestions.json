@@ -16,7 +16,10 @@
       "whyItMatters": "Right now every game built by the Dev Agent hand-codes physics, collision detection, tile rendering, particle systems, and input from scratch. That's ~300 lines of boilerplate per game — code that's been written and debugged 2 times already. LittleJS provides all of this battle-tested and optimised. The Dev Agent then focuses entirely on what makes each game unique.",
       "systemBenefit": "• Dev Agent writes 300+ fewer lines per game — faster builds, fewer bugs\n• Built-in particle system replaces our hand-rolled one\n• WebGL2 rendering gives games a visual quality boost for free\n• Built-in tilemap collision system benefits Tower Collapse, Word Dungeon, and any platformer\n• ZzFX is already integrated inside LittleJS — audio improvements come for free\n• All CrazyGames constraints met: single file, no dependencies, mobile touch built-in",
       "integration": "1. Download littlejs.min.js and add to templates/ folder\n2. Add <script src='../../templates/littlejs.min.js'> to each new game template\n3. Update agents/AGENT_INSTRUCTIONS.md — add LittleJS API guide\n4. Update templates/pixel-platformer.html and templates/endless-runner.html to use LittleJS engine\n5. Add to knowledge/KNOWLEDGE.md quick reference\n6. Existing games (Gravity Flipper, Pixel Chef Rush) keep their current engine — no breaking changes",
-      "affectedAgents": ["developer", "designer"],
+      "affectedAgents": [
+        "developer",
+        "designer"
+      ],
       "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": "2026-06-05T14:00:00Z",
@@ -38,7 +41,9 @@
       "whyItMatters": "Our games currently use hand-tuned beep() calls — the sounds are functional but bland. ZzFX generates real game sounds (jumps, hits, coins, explosions, pickups) from parameter arrays. It has a live online designer where you dial in the exact sound you want and copy the one-liner. The difference in audio quality is massive and it's still zero audio files.",
       "systemBenefit": "• All game sounds go from 'functional beeps' to 'real game audio'\n• Dev Agent uses ZzFX designer URL to find sounds, then pastes 1-line parameter arrays\n• No audio files = still CrazyGames-compliant and fast-loading\n• Designer URL: https://killedbyapixel.github.io/ZzFX/\n• Sound examples available in LittleJS (synergy if both approved)\n• QA Agent can verify sounds trigger correctly via eval checks",
       "integration": "1. Add ZzFXMicro.min.js (310 bytes!) to templates/ folder\n2. Add <script src='../../templates/zzfx.min.js'> to all new game templates\n3. Replace all beep() calls in AGENT_INSTRUCTIONS with ZzFX parameter array format\n4. Update knowledge/techniques/audio.md with ZzFX designer workflow\n5. Optional: update Gravity Flipper + Pixel Chef Rush audio (not required)",
-      "affectedAgents": ["developer"],
+      "affectedAgents": [
+        "developer"
+      ],
       "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": "2026-06-05T14:57:00Z",
@@ -60,10 +65,12 @@
       "whyItMatters": "The QA Agent currently injects JavaScript via preview eval() to test games. This works but can't take real screenshots, can't test on Safari, and can't simulate real touch events at pixel coordinates. Playwright runs games in a real browser, clicks buttons, simulates swipes, and takes screenshots that can be compared visually across builds to catch regressions.",
       "systemBenefit": "• QA Agent can take real screenshots of title screen, gameplay, and game-over\n• Visual regression: if reflexion accidentally breaks something visually, Playwright catches it\n• Real touch event simulation — confirms mobile controls at exact coordinates\n• Tests on Chrome AND Firefox AND Safari (currently Chrome-only)\n• Screenshot tool timeout issue (canvas 60fps) gets fixed — Playwright handles it natively\n• npm run test becomes a real CI gate before every GitHub push",
       "integration": "1. npm install playwright in game-studio folder (already has package.json)\n2. npx playwright install chromium (lightweight, just Chromium)\n3. Create tests/qa-template.spec.js with standard game test suite\n4. Update agents/qa-agent-instructions.md with Playwright test workflow\n5. Add 'test' script to package.json: 'playwright test'\n6. Update .github/workflows/ with CI test action (optional)",
-      "affectedAgents": ["qa"],
-      "status": "pending",
+      "affectedAgents": [
+        "qa"
+      ],
+      "status": "integrating",
       "suggestedAt": "2026-06-05T12:00:00Z",
-      "approvedAt": null,
+      "approvedAt": "2026-06-05T18:52:16.607Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "integrationNotes": null
@@ -82,7 +89,10 @@
       "whyItMatters": "Every pixel art character in our games is currently defined as a string array like `['0221200', '0211120']`. That works but it's tedious to design new characters. Piskel could be embedded in the dashboard as a 'Sprite Studio' tab. You'd draw a character visually, and it would export the frame data in our exact string-array format for the Dev Agent to use.",
       "systemBenefit": "• Visual sprite/animation editor embedded in the dashboard\n• Export directly to the string-array format the Dev Agent already uses\n• Design walk cycles, idle animations, attack frames visually\n• Reflexion Agent could suggest 'sprite needs improvement' and you could fix it visually\n• Reduces the pixel art skill needed — drawing is easier than coding colour grids\n• All exports are pure data — no binary assets, stays CrazyGames-compliant",
       "integration": "1. Clone piskelapp/piskel and build it (requires npm install + grunt build)\n2. Serve it from /sprite-studio/ on the local server\n3. Add 'Sprite Studio' tab to dashboard linking to localhost:3500/sprite-studio/\n4. Write export plugin that converts Piskel format to our string-array format\n5. Note: only for use during development — not shipped with games",
-      "affectedAgents": ["developer", "designer"],
+      "affectedAgents": [
+        "developer",
+        "designer"
+      ],
       "status": "pending",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": null,
@@ -104,7 +114,9 @@
       "whyItMatters": "Our games have sound effects but no background music. Music dramatically improves game feel and increases average session length. ZzFXM plays chiptune-style music from a tiny data array — no MP3 files, no CDN, still loads instantly. It works with the same ZzFX sound synthesis so the aesthetic matches our existing audio.",
       "systemBenefit": "• Each game gets a background music track — no audio files, pure data\n• Music matches the game's mood (fast for action, calm for puzzle)\n• NoteCraft editor exports directly to ZzFXM format: https://notecraft.fun\n• Dev Agent adds one track per game — tune it with the online editor\n• CrazyGames SDK can mute it when showing ads (SDK hook already in our games)\n• Works perfectly alongside ZzFX (synergy if both approved)",
       "integration": "1. Add zzfxm.min.js to templates/ folder (requires ZzFX also approved)\n2. Add <script> tag to game templates after ZzFX\n3. Update AGENT_INSTRUCTIONS with music template: loop, pause on game-over, stop during ads\n4. Each game gets a simple looping track defined in its index.html\n5. Music muted by default until first user interaction (browser autoplay rules)",
-      "affectedAgents": ["developer"],
+      "affectedAgents": [
+        "developer"
+      ],
       "status": "pending",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": null,

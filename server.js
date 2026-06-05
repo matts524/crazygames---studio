@@ -316,8 +316,10 @@ app.post('/api/resume', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── POST /api/state / /api/queue ──────────────────────────────
+// ── GET/POST /api/state / /api/queue ──────────────────────────
+app.get('/api/state', (req, res) => { try { res.json(readJSON('pipeline/state.json')); } catch(e) { res.json({}); } });
 app.post('/api/state', (req, res) => { writeJSON('pipeline/state.json', req.body); res.json({ ok: true }); });
+app.get('/api/queue', (req, res) => { try { res.json(readJSON('pipeline/queue.json')); } catch(e) { res.json({ ideas: [], inProgress: [], completed: [], shipped: [] }); } });
 app.post('/api/queue', (req, res) => { writeJSON('pipeline/queue.json', req.body); res.json({ ok: true }); });
 
 // ── Start ─────────────────────────────────────────────────────
