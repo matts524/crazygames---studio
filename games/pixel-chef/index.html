@@ -83,11 +83,15 @@ function recipesForLevel(lvl) { return RECIPES.filter(r => r.level <= lvl); }
 const STATES = { TITLE:0, PLAY:1, LEVELUP:2, DEAD:3 };
 let state = STATES.TITLE;
 let score, hearts, level, ordersCompleted;
-let shake = 0, shakeFrames = 0;  // screen shake
-let streak = 0;                   // consecutive correct orders
+let shake = 0, shakeFrames = 0;
+let streak = 0;
 let orders, plate, particles;
 let orderTimer, levelUpTimer;
 let bestScore = parseInt(localStorage.getItem('pcr_best')) || 0;
+// R2 additions
+let scorePopups = [];          // flying score numbers
+let chefMood    = 'neutral';   // 'neutral' | 'happy' | 'sad' | 'excited'
+let chefMoodTimer = 0;         // frames to hold current mood
 let deathCount = 0;
 
 // Station rects (bottom row)
@@ -125,6 +129,7 @@ function init() {
   particles = [];
   orderTimer = 0;
   shake = 0; shakeFrames = 0; streak = 0;
+  scorePopups = []; chefMood = 'neutral'; chefMoodTimer = 0;
   cgStart();
 }
 
@@ -342,6 +347,26 @@ function drawPlate() {
   if (plate.length > 0) px(`${plate.length} ing`, W/2, py + ph - 20, 7, '#8b6940', 'center');
 }
 
+// R2: Floating score popups
+function drawScorePopups() {
+  scorePopups = scorePopups.filter(p => {
+    p.y  += p.vy;
+    p.life -= 0.022;
+    if (p.life <= 0) return false;
+    ctx.globalAlpha = Math.min(1, p.life * 2);
+    ctx.font = `bold ${p.perfect ? 14 : 11}px 'Courier New'`;
+    ctx.textAlign = 'center';
+    // shadow
+    ctx.fillStyle = '#000';
+    ctx.fillText(`+${p.value}${p.perfect ? ' ⭐' : ''}`, p.x+1, p.y+1);
+    ctx.fillStyle = p.perfect ? '#ffd700' : '#10b981';
+    ctx.fillText(`+${p.value}${p.perfect ? ' ⭐' : ''}`, p.x, p.y);
+    ctx.globalAlpha = 1;
+    return true;
+  });
+  ctx.textAlign = 'left';
+}
+
 function drawHUD() {
   // Background strip
   ctx.fillStyle = '#1a0a00';
@@ -354,8 +379,12 @@ function drawHUD() {
     px(i < hearts ? '❤' : '🖤', 10 + i * 22, 28, 14, '#ef4444');
   }
 
-  // Title
-  px('PIXEL CHEF RUSH', W/2, 26, 10, '#f59e0b', 'center');
+  // R2: Chef face (reacts to events)
+  if (chefMoodTimer > 0) chefMoodTimer--;
+  else chefMood = 'neutral';
+  const faceEmoji = chefMood === 'excited' ? '🤩' : chefMood === 'happy' ? '😄' : chefMood === 'sad' ? '😰' : '👨‍🍳';
+  ctx.font = '18px serif'; ctx.textAlign = 'center';
+  ctx.fillText(faceEmoji, W/2, 26);
 
   // Score
   px(`${score}`, W-10, 26, 12, '#ffd700', 'right');
@@ -446,6 +475,7 @@ function drawGame() {
   // HUD (drawn last so it's on top)
   drawHUD();
   drawParticles();
+  drawScorePopups(); // R2
   ctx.restore(); // end screen shake
 
   // ── IMPROVEMENT 3: Streak indicator ──
@@ -507,21 +537,30 @@ function tryServe() {
   const idx = orders.findIndex(o => plateMatchesOrder(o));
   if (idx !== -1) {
     const ord = orders[idx];
-    const bonus = Math.ceil(ord.timeLeft / ord.maxTime * 5);
-    // ── IMPROVEMENT: streak bonus ──
+    const timerRatio   = ord.timeLeft / ord.maxTime;
+    const timeBonus    = Math.ceil(timerRatio * 5);
+    const isPerfect    = timerRatio > 0.70;        // R2: perfect order
+    const perfectBonus = isPerfect ? 15 : 0;
     streak++;
     const streakBonus = streak >= 3 ? Math.floor(streak / 3) * 5 : 0;
-    score += 10 + bonus + streakBonus;
+    const total = 10 + timeBonus + perfectBonus + streakBonus;
+    score += total;
     ordersCompleted++;
     sfxCorrect();
-    spawnParticles(W/2, H/2, '#10b981');
-    if (streakBonus > 0) spawnParticles(W/2, 60, '#f59e0b'); // gold burst on streak bonus
+    if (isPerfect) beep(1320, 0.1, 'sine', 0.3);
+    spawnParticles(W/2, H/2, isPerfect ? '#ffd700' : '#10b981');
+    if (isPerfect) spawnParticles(W/2, 180, '#ffd700', 12);
+    if (streakBonus > 0) spawnParticles(W/2, 60, '#f59e0b');
+    // R2: score popup + chef mood
+    scorePopups.push({ x: W/2, y: 200, value: total, perfect: isPerfect, life: 1.0, vy: -1.2 });
+    chefMood = streak >= 4 ? 'excited' : 'happy'; chefMoodTimer = 90;
     orders[idx] = newOrder();
     plate = [];
   } else {
     // Wrong — lose a heart + SCREEN SHAKE
     hearts--;
-    streak = 0; // reset streak
+    streak = 0;
+    chefMood = 'sad'; chefMoodTimer = 60; // R2: chef reacts
     sfxWrong();
     shake = 5; shakeFrames = 10; // ── IMPROVEMENT 1: screen shake ──
     spawnParticles(W/2, STATION_Y + 28, '#ef4444');

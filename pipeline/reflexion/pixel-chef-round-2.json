@@ -1,0 +1,18 @@
+{
+  "gameId": "pixel-chef",
+  "gameTitle": "Pixel Chef Rush",
+  "round": 2,
+  "reflexionComplete": false,
+  "scoreBefore": { "visual": 1.4, "feel": 1.6, "engagement": 1.5, "clarity": 1.7, "fun": 1.6, "total": 7.8 },
+  "scoreAfter":  { "visual": 1.6, "feel": 1.8, "engagement": 1.8, "clarity": 1.7, "fun": 1.8, "total": 8.7 },
+  "improvements": [
+    { "title": "Perfect order ⭐ bonus — serve while timer >70% = +15 coins + gold particles + high chime", "impact": 4, "effort": 1, "priority": 4.0, "implemented": true },
+    { "title": "Chef emoji face in HUD reacts: 😄 happy on correct, 🤩 excited on 4+ streak, 😰 sad on wrong", "impact": 3, "effort": 1, "priority": 3.0, "implemented": true },
+    { "title": "Score popup — +value flies upward with ⭐ on perfect orders, green for normal", "impact": 4, "effort": 2, "priority": 2.0, "implemented": true }
+  ],
+  "skipped": [
+    { "title": "Rush Hour event (2× orders)", "reason": "Round 3 — saves the best surprise for last" }
+  ],
+  "notes": "Huge engagement jump. Perfect order mechanic creates a new skill ceiling — experienced players race the timer intentionally. Chef face adds personality at almost zero cost. Score pops make every serve feel rewarding. Score 7.8 → 8.7. One round left.",
+  "testedAt": "2026-06-05T10:20:00Z"
+}
