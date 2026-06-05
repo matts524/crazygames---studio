@@ -7,7 +7,8 @@
     { "id": "designer",   "name": "Design Agent",     "icon": "🎨", "status": "idle",    "currentTask": "Ready for next game", "color": "#8b5cf6" },
     { "id": "developer",  "name": "Dev Agent",        "icon": "⚙️", "status": "idle",    "currentTask": "Ready for next game", "color": "#10b981" },
     { "id": "qa",         "name": "QA Agent",         "icon": "🧪", "status": "idle",    "currentTask": "Standing by", "color": "#ef4444" },
-    { "id": "reflexion",  "name": "Reflexion Agent",  "icon": "🔁", "status": "idle",    "currentTask": "Pixel Chef Rush COMPLETE ✓ — 9.4/10", "color": "#ec4899" }
+    { "id": "reflexion",  "name": "Reflexion Agent",  "icon": "🔁", "status": "idle",    "currentTask": "Pixel Chef Rush COMPLETE ✓ — 9.4/10", "color": "#ec4899" },
+    { "id": "toolscout",  "name": "Tool Scout",       "icon": "🔭", "status": "idle",    "currentTask": "5 tools awaiting your approval", "color": "#a78bfa" }
   ],
   "activityLog": [
     { "time": "11:02", "icon": "🚀", "msg": "Pixel Chef Rush FULLY SHIPPED", "detail": "9.4/10 after 3 reflexion rounds" },

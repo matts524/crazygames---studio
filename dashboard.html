@@ -1374,32 +1374,68 @@ function renderToolCard(tool, showActions) {
 async function approveTool(toolId) {
   const tool = (toolData.tools || []).find(t => t.id === toolId);
   if (!tool) return;
-  const btn = document.querySelector(`button[onclick="approveTool('${toolId}')"]`);
-  if (btn) { btn.textContent = '⏳ Approving...'; btn.disabled = true; }
 
-  // Try Express API first
-  try {
-    const r = await fetch(`/api/tool/approve/${toolId}`, { method: 'POST', headers: {'Content-Type':'application/json'} });
-    if (r.ok) {
-      showToast(`✅ "${tool.name}" approved — integrating on next build cycle`, 'var(--green)');
-      await loadTools();
-      return;
-    }
-  } catch(e) {}
+  // Find and replace the approve button with a live progress log
+  const card = document.querySelector(`button[onclick="approveTool('${toolId}')"]`)?.closest('[style*="border-left:4px"]');
+  const actionArea = card?.querySelector('[style*="display:flex;gap:8px"]');
+  if (actionArea) {
+    actionArea.innerHTML = `
+      <div id="progress-${toolId}" style="
+        width:100%;background:var(--surface2);border:1px solid var(--border);
+        border-radius:8px;padding:12px;font-size:0.72rem;
+      ">
+        <div style="color:var(--yellow);font-weight:600;margin-bottom:6px">⏳ Integrating ${esc(tool.name)}...</div>
+        <div id="progress-log-${toolId}" style="color:var(--muted);line-height:1.8">Contacting server...</div>
+      </div>`;
+  }
 
-  // Fallback: write approval directly to tool-suggestions.json via PUT
-  tool.status     = 'approved';
-  tool.approvedAt = new Date().toISOString();
+  const logEl = document.getElementById(`progress-log-${toolId}`);
+  const addLog = (line) => { if (logEl) logEl.innerHTML += (logEl.innerHTML ? '<br>' : '') + line; };
+
   try {
-    await fetch('./pipeline/tool-suggestions.json', {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(toolData)
+    addLog('📡 Sending approval to server...');
+    const r = await fetch(`/api/tool/approve/${toolId}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'}
     });
-  } catch(e) {}
 
-  showToast(`✅ "${tool.name}" approved! Claude will integrate it on next cycle.`, 'var(--green)');
-  renderTools();
+    if (r.ok) {
+      const result = await r.json();
+      (result.logs || []).forEach(l => addLog(l));
+
+      if (result.error) {
+        addLog(`⚠ ${result.error}`);
+        showToast(`⚠ "${tool.name}" approved with issues — check progress log`, 'var(--yellow)');
+      } else {
+        addLog(`<span style="color:var(--green);font-weight:600">✅ Integration complete!</span>`);
+        showToast(`✅ "${tool.name}" integrated! All future games will use it.`, 'var(--green)');
+      }
+      setTimeout(() => loadTools(), 1500);
+
+    } else {
+      // Server not running — show instructions
+      addLog('⚠ Server not running. To integrate tools:');
+      addLog('1. Close this dashboard');
+      addLog('2. Double-click <strong>OPEN DASHBOARD.bat</strong>');
+      addLog('3. Come back and click Approve again');
+      addLog('');
+      addLog('<em>The .bat file starts the full server with integration support.</em>');
+    }
+  } catch(e) {
+    // Server not reachable
+    if (actionArea) actionArea.innerHTML = `
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);
+        border-radius:8px;padding:12px;font-size:0.72rem;color:#f59e0b">
+        <strong>⚠ Server not running</strong><br><br>
+        To approve tools with automatic integration:<br>
+        <ol style="margin:8px 0 0 16px;line-height:2">
+          <li>Close this browser tab</li>
+          <li>Double-click <strong>OPEN DASHBOARD.bat</strong></li>
+          <li>The dashboard will re-open with the full server</li>
+          <li>Click Approve — it will download and integrate immediately</li>
+        </ol>
+      </div>`;
+  }
 }
 
 async function rejectTool(toolId) {
