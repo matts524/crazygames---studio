@@ -160,9 +160,53 @@
         "Rope Swing platformer",
         "Ragdoll Fighter"
       ],
-      "status": "integrating",
+      "status": "integrated",
       "suggestedAt": "2026-06-05T20:45:00Z",
       "approvedAt": "2026-06-05T19:48:13.586Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "integrationNotes": "ℹ Matter.js — 2D Physics Engine uses online tools — setting up launcher\n✅ Committed and pushed to GitHub"
+    },
+    {
+      "id": "babylonjs",
+      "name": "Babylon.js — 3D Web Engine",
+      "githubUrl": "https://github.com/BabylonJS/Babylon.js",
+      "stars": 23000,
+      "licence": "Apache 2.0",
+      "lastCommit": "2026-06",
+      "fileSize": "~900kb minified, ~540kb gzipped",
+      "importance": "important",
+      "importanceReason": "Unlocks entirely new game category (3D games) currently impossible with LittleJS. Mobile-optimized, feature-complete 3D engine with physics, particles, lighting — enables professional-looking 3D games within CrazyGames constraints",
+      "brief": "Complete 3D graphics engine for the browser with physics, particle systems, lights, shadows, and post-processing effects.",
+      "whyItMatters": "Right now every game is 2D. Babylon.js opens 3D — marble rolling games, voxel builders, 3D puzzles, isometric adventures, first-person exploration. These are entirely different gameplay experiences. Babylon is built by Microsoft, battle-tested on thousands of projects, and crucially: optimized for mobile (CrazyGames' primary audience). Unlike Three.js, physics and particles are built-in, so the Dev Agent doesn't spend time integrating separate libraries.",
+      "systemBenefit": "• New game category: 3D games (marble mazes, voxel builders, 3D puzzles, isometric games)\n• Complete feature set: physics (Cannon.js), particles, lighting, shadows, post-processing\n• Mobile-optimized: touch input, performance profiling, LOD systems built-in\n• Dev Agent writes less code: no library integration needed, everything is there\n• Professional visual quality with minimal setup (better materials/lighting than Three.js out-of-the-box)\n• Works as single HTML file: bundled, no external dependencies, CrazyGames-compliant",
+      "systemBenefitBullets": [
+        "3D game category unlocked",
+        "Integrated physics (Cannon.js) — no extra setup",
+        "Particle effects, lighting, shadows built-in",
+        "Mobile-first design (essential for CrazyGames)",
+        "Less code for Dev Agent to write per game",
+        "Professional visuals with minimal tweaking"
+      ],
+      "integration": "1. Download babylon.js (~900kb minified) → templates/babylon.min.js\n2. Create 3D game template: templates/3d-game-template.html\n3. Add to agents/AGENT_INSTRUCTIONS.md: 3D game API guide, low-poly rules, performance budgets\n4. Define '3D Game Rules': max 50k vertices per scene, max 10 physics bodies, no heavy post-processing\n5. Update Design Agent to handle 3D visual specs (lighting, materials, model complexity)\n6. Create templates/babylon-examples/ with 3 starter scenes (marble roll, voxel grid, isometric)\n7. Add to knowledge/KNOWLEDGE.md: 3D patterns, performance tips, mobile optimization\n8. Commit and push to GitHub",
+      "3dGameRules": "• Low-poly only: 50k max vertices per scene\n• Physics bodies: max 10 active bodies per game (mobile constraint)\n• No heavy shaders: stick to standard materials\n• Lighting: 2 lights max (directional + ambient)\n• Particles: max 100 particles on screen\n• No post-processing unless essential\n• Gzip compression mandatory (gets 900kb → 540kb)\n• Test on mobile before shipping",
+      "gamesUnlocked": [
+        "Marble Rolling Maze",
+        "Voxel Builder (Minecraft-lite)",
+        "3D Puzzle Box",
+        "Isometric Resource Manager",
+        "Low-poly Ball Physics",
+        "3D Card Memory Game",
+        "Simple First-Person Exploration"
+      ],
+      "affectedAgents": [
+        "developer",
+        "designer",
+        "qa"
+      ],
+      "status": "integrating",
+      "suggestedAt": "2026-06-05T21:15:00Z",
+      "approvedAt": "2026-06-05T21:26:05.918Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "integrationNotes": null
