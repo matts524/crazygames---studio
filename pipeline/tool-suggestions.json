@@ -17,12 +17,12 @@
       "systemBenefit": "• Dev Agent writes 300+ fewer lines per game — faster builds, fewer bugs\n• Built-in particle system replaces our hand-rolled one\n• WebGL2 rendering gives games a visual quality boost for free\n• Built-in tilemap collision system benefits Tower Collapse, Word Dungeon, and any platformer\n• ZzFX is already integrated inside LittleJS — audio improvements come for free\n• All CrazyGames constraints met: single file, no dependencies, mobile touch built-in",
       "integration": "1. Download littlejs.min.js and add to templates/ folder\n2. Add <script src='../../templates/littlejs.min.js'> to each new game template\n3. Update agents/AGENT_INSTRUCTIONS.md — add LittleJS API guide\n4. Update templates/pixel-platformer.html and templates/endless-runner.html to use LittleJS engine\n5. Add to knowledge/KNOWLEDGE.md quick reference\n6. Existing games (Gravity Flipper, Pixel Chef Rush) keep their current engine — no breaking changes",
       "affectedAgents": ["developer", "designer"],
-      "status": "pending",
+      "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
-      "approvedAt": null,
+      "approvedAt": "2026-06-05T14:00:00Z",
       "rejectedAt": null,
       "rejectionReason": null,
-      "integrationNotes": null
+      "integrationNotes": "✅ Downloaded littlejs.min.js (175kb) → templates/littlejs.min.js\n✅ Downloaded littlejs.js (readable reference) → templates/littlejs.js\n✅ Updated agents/AGENT_INSTRUCTIONS.md with full LittleJS API guide\n✅ Updated knowledge/KNOWLEDGE.md quick reference\n✅ Committed and pushed to GitHub\n\nAll future games will use LittleJS engine automatically."
     },
     {
       "id": "zzfx",

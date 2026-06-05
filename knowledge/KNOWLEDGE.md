@@ -34,6 +34,7 @@ These are the highest-ROI things the Dev Agent must apply to every game:
 6. **Urgent timer pulse (red, sin wave)** — players miss expiry without it. Critical for any timed mechanic
 7. **pauseLoop/resumeLoop hooks** — required in every game for QA agent to function
 8. **CrazyGames SDK gameplayStart/Stop** — call at game start and death, not just init
+13. **LittleJS INTEGRATED** ✅ — `templates/littlejs.min.js` — use `engineInit()` + `EngineObject` instead of hand-writing physics. Saves ~300 lines per game. See AGENT_INSTRUCTIONS.md for full API.
 9. **Idle animation** — just shift body 1px down on frame 2 at 500ms per frame. Looks alive instantly.
 10. **Walk cycle** — 4 frames: contact (foot fwd, body DOWN 1px) → passing (feet together, body UP 1px) → mirror → passing. NOT a bounce — the UP happens when feet are together.
 11. **Hold important animation frames longer** — strike/impact hold = 150–200ms, movement frames = 80ms. Never uniform FPS.

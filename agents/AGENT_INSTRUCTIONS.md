@@ -10,17 +10,80 @@ This file defines how each agent operates within the pipeline. Claude reads this
 4. **build** → Agent writes the complete single-file HTML5 game (self-contained, no external deps)
 5. **qa** → Agent plays through the game mentally, checks for bugs, polishes, marks as shipped
 
-## Approved Tools (check before every build)
+## ✅ INTEGRATED TOOLS (mandatory — use in every new game)
 
-Before writing any game code, read `pipeline/tool-suggestions.json` and check for tools with `status: "approved"`.
-For each approved tool, apply its integration instructions. Once integrated into a game, you do not need to re-read it for future games — the templates will already include it.
+### 🎮 LittleJS — INTEGRATED
+**File:** `templates/littlejs.min.js` (175kb, downloaded 2026-06-05)
+**Docs:** https://github.com/KilledByAPixel/LittleJS
+**CDN fallback:** https://cdn.jsdelivr.net/gh/KilledByAPixel/LittleJS@main/dist/littlejs.min.js
 
-Current tool status is tracked in `pipeline/tool-suggestions.json`. If a tool is approved:
-- **LittleJS** → use as game engine instead of hand-written physics/collision
-- **ZzFX** → use for all sound effects instead of raw Web Audio beep()
-- **ZzFXM** → add background music using the tracker format
-- **Playwright** → QA Agent uses browser tests instead of eval() hacks
-- **Piskel** → sprite designs can come from the visual editor
+Every new game MUST include LittleJS instead of hand-writing engine code:
+```html
+<script src="../../templates/littlejs.min.js"></script>
+```
+
+**What LittleJS provides (do NOT re-implement these):**
+- `vec2(x,y)` — 2D vector math
+- `drawRect(pos, size, color)` — draw rectangles
+- `drawTile(pos, size, tileIndex)` — draw sprites from tilemap
+- `drawText(text, pos, size, color)` — pixel text rendering
+- `new Sound([...])` / `sound.play()` — audio via ZzFX (built-in!)
+- `keyIsDown(key)` / `mouseIsDown(0)` — input handling
+- `gamepadIsDown(button)` — gamepad support
+- `new ParticleEmitter(pos, ...)` — particle system
+- `TileLayerData` + `TileLayer` — tilemap collision
+- `engineInit(mainInit, mainUpdate, mainUpdatePost, mainRender)` — game loop
+- `cameraPos`, `cameraScale` — camera control
+- `vec2(canvas.width, canvas.height)` → use `mainCanvasSize` instead
+
+**Standard LittleJS game structure:**
+```javascript
+// Add after <script src="../../templates/littlejs.min.js"></script>
+function gameInit() {
+  // called once on startup — load assets, set up level
+}
+function gameUpdate() {
+  // called every frame — update game logic
+}
+function gameUpdatePost() {
+  // called after physics — UI updates
+}
+function gameRender() {
+  // called every frame — draw background/world
+}
+function gameRenderPost() {
+  // called after objects render — draw HUD overlay
+}
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+```
+
+**Object system:**
+```javascript
+class Player extends EngineObject {
+  constructor(pos) {
+    super(pos, vec2(1));  // pos, size
+    this.setCollision(true, false); // solid, isTrigger
+  }
+  update() {
+    super.update(); // apply physics
+    if (keyIsDown('ArrowRight')) this.velocity.x += 0.1;
+    if (keyIsDown('Space') && this.groundObject) this.velocity.y = 0.3;
+  }
+  render() {
+    drawRect(this.pos, this.size, new Color(0,0.5,1)); // blue square
+  }
+}
+```
+
+---
+
+## Other Approved Tools (check before every build)
+
+Other tools tracked in `pipeline/tool-suggestions.json`:
+- **ZzFX** → if integrated: use for sound effects
+- **ZzFXM** → if integrated: add background music
+- **Playwright** → if integrated: QA Agent uses browser tests
+- **Piskel** → if integrated: use for sprite design
 
 ---
 
