@@ -1,19 +1,18 @@
 {
-  "lastUpdated": "2026-06-05T11:02:00Z",
+  "lastUpdated": "2026-06-05T11:30:00Z",
   "studioRunning": true,
   "agents": [
-    { "id": "ideator",    "name": "Idea Agent",      "icon": "💡", "status": "idle",   "currentTask": "5 ideas awaiting your approval", "color": "#f59e0b" },
-    { "id": "researcher", "name": "Research Agent",   "icon": "🔬", "status": "idle",   "currentTask": "Ready for next game", "color": "#3b82f6" },
-    { "id": "designer",   "name": "Design Agent",     "icon": "🎨", "status": "idle",   "currentTask": "Ready for next game", "color": "#8b5cf6" },
-    { "id": "developer",  "name": "Dev Agent",        "icon": "⚙️", "status": "idle",   "currentTask": "Ready for next game", "color": "#10b981" },
-    { "id": "qa",         "name": "QA Agent",         "icon": "🧪", "status": "idle",   "currentTask": "Standing by", "color": "#ef4444" },
-    { "id": "reflexion",  "name": "Reflexion Agent",  "icon": "🔁", "status": "idle",   "currentTask": "Pixel Chef Rush COMPLETE ✓ — 9.4/10", "color": "#ec4899" }
+    { "id": "ideator",    "name": "Idea Agent",      "icon": "💡", "status": "active",  "currentTask": "Generated 3 new ideas from trend research — 8 ideas now awaiting approval", "color": "#f59e0b" },
+    { "id": "researcher", "name": "Research Agent",   "icon": "🔬", "status": "idle",    "currentTask": "Trend scan complete — merge, IO-lite, stacking identified as gaps", "color": "#3b82f6" },
+    { "id": "designer",   "name": "Design Agent",     "icon": "🎨", "status": "idle",    "currentTask": "Ready for next game", "color": "#8b5cf6" },
+    { "id": "developer",  "name": "Dev Agent",        "icon": "⚙️", "status": "idle",    "currentTask": "Ready for next game", "color": "#10b981" },
+    { "id": "qa",         "name": "QA Agent",         "icon": "🧪", "status": "idle",    "currentTask": "Standing by", "color": "#ef4444" },
+    { "id": "reflexion",  "name": "Reflexion Agent",  "icon": "🔁", "status": "idle",    "currentTask": "Pixel Chef Rush COMPLETE ✓ — 9.4/10", "color": "#ec4899" }
   ],
   "activityLog": [
-    { "time": "10:22", "icon": "✅", "msg": "Round 2 complete — 7.8 → 8.7/10", "detail": "Perfect ⭐ bonus, chef reactions, score popups" },
-    { "time": "10:45", "icon": "🔁", "msg": "Reflexion Round 3 FINAL started", "detail": "Rush Hour event + kitchen decorations + animated level-up" },
-    { "time": "11:00", "icon": "✅", "msg": "Round 3 complete — 8.7 → 9.4/10", "detail": "Score ≥9.0 reached — reflexion loop ending early. GAME COMPLETE." },
-    { "time": "11:02", "icon": "🚀", "msg": "Pixel Chef Rush FULLY SHIPPED", "detail": "3 reflexion rounds: 5.5 → 7.8 → 8.7 → 9.4/10. Ready for CrazyGames." },
-    { "time": "11:02", "icon": "📚", "msg": "Knowledge base updated", "detail": "Rush Hour pattern, ambient details, level-up animation written to game-feel.md" }
+    { "time": "11:02", "icon": "🚀", "msg": "Pixel Chef Rush FULLY SHIPPED", "detail": "9.4/10 after 3 reflexion rounds" },
+    { "time": "11:20", "icon": "🔬", "msg": "Research Agent: CrazyGames trend scan", "detail": "Merging = #1 trending mechanic. IO-lite + stacking = identified gaps. 40% platform growth YoY." },
+    { "time": "11:30", "icon": "💡", "msg": "Idea Agent: 3 new games added to queue", "detail": "Merge Valley (cute merge), Neon Blobs (IO-lite), Stack Master (timing/stack)" },
+    { "time": "11:30", "icon": "⏸", "msg": "Studio idle — waiting for game approval", "detail": "8 ideas ready. Open dashboard → click 'Build This' to start the pipeline." }
   ]
 }
