@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Endless Runner Template</title>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<style>* {margin:0;padding:0;box-sizing:border-box;} body{background:#000;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;touch-action:none;} canvas{display:block;}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ═══════════════════════════════════════════════
+//  ENDLESS RUNNER TEMPLATE  —  Game Studio v1
+//  Customise: GAME_TITLE, PAL, obstacle shapes,
+//  player shape, powerup effects, background
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const W=400,H=300; let SCALE=1;
+function resize(){SCALE=Math.min(innerWidth/W,innerHeight/H);canvas.width=W;canvas.height=H;canvas.style.width=W*SCALE+'px';canvas.style.height=H*SCALE+'px';}
+resize(); window.addEventListener('resize',resize);
+
+// ── Config (CUSTOMISE) ──────────────────────────────────
+const GAME_TITLE = 'ENDLESS RUNNER';
+const PAL = { bg:'#0a0a1f', ground:'#1e3a5f', runner:'#06b6d4', obstacle:'#a855f7', coin:'#ffd700', text:'#f1f5f9' };
+const GROUND_Y   = H - 50;        // where ground line sits
+const RUNNER_X   = 60;            // fixed horizontal position
+const BASE_SPEED = 3;             // starting scroll speed
+const SPEED_INC  = 0.0005;        // speed increase per frame
+const JUMP_FORCE = -11;
+const GRAVITY    = 0.55;
+const GAP_MIN    = 120;           // min gap between obstacles
+const GAP_RANGE  = 200;           // random range added to gap
+
+// ── State ────────────────────────────────────────────────
+const ST={TITLE:0,PLAY:1,DEAD:2};
+let state=ST.TITLE, speed, dist, score, bestScore=parseInt(localStorage.getItem(GAME_TITLE+'_b'))||0;
+let runner, obstacles, coins, particles, bgLayers, graceTimer;
+let shake=0, shakeT=0;
+
+// ── Audio ────────────────────────────────────────────────
+let AC; function ensureAC(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();}
+function tone(f,d,type='sine',v=0.2){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+d);o.start();o.stop(AC.currentTime+d);}
+const SFX={jump:()=>tone(300,0.06),coin:()=>{tone(880,0.04);setTimeout(()=>tone(1320,0.06),40);},die:()=>{tone(400,0.1,'sawtooth');setTimeout(()=>tone(200,0.25,'sawtooth'),100);}};
+
+// ── CrazyGames SDK ───────────────────────────────────────
+(async()=>{try{await window.CrazyGames?.SDK?.init();}catch(e){}})();
+let deathCount=0;
+
+// ── Init ─────────────────────────────────────────────────
+function init(){
+  speed=BASE_SPEED; dist=0; score=0; graceTimer=90;
+  runner={x:RUNNER_X,y:GROUND_Y-30,vy:0,h:30,w:20,onGround:true,animT:0};
+  obstacles=[]; coins=[]; particles=[];
+  bgLayers=[
+    {x:0,speed:0.2,items:Array.from({length:6},(_,i)=>({x:i*80+20,h:40+i*10}))},
+    {x:0,speed:0.5,items:Array.from({length:4},(_,i)=>({x:i*120+40,h:20+i*5}))},
+  ];
+  try{window.CrazyGames?.SDK?.game?.gameplayStart();}catch(e){}
+  spawnObstacle();
+}
+
+// ── Spawning ─────────────────────────────────────────────
+let nextObstacleIn=GAP_MIN;
+function spawnObstacle(){
+  const type=Math.random()<0.7?'ground':'air';
+  obstacles.push({
+    x:W+20, type,
+    y: type==='ground' ? GROUND_Y-30-Math.random()*20 : GROUND_Y-80-Math.random()*30,
+    w:16+Math.random()*12, h:20+Math.random()*20,
+  });
+  nextObstacleIn=GAP_MIN+Math.random()*GAP_RANGE;
+  // Occasionally spawn coin
+  if(Math.random()<0.4) coins.push({x:W+60,y:GROUND_Y-60-Math.random()*40,collected:false,animT:0});
+}
+
+function spawnParticles(x,y,color,n=8){
+  for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2;particles.push({x,y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,life:1,color});}
+}
+
+// ── Input ─────────────────────────────────────────────────
+function doJump(){if(runner.onGround){runner.vy=JUMP_FORCE;runner.onGround=false;SFX.jump();}}
+window.addEventListener('keydown',e=>{
+  ensureAC();
+  if(state===ST.TITLE||state===ST.DEAD){state=ST.PLAY;init();return;}
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();}
+});
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();ensureAC();
+  if(state!==ST.PLAY){state=ST.PLAY;init();return;}
+  doJump();
+});
+
+// ── Update ────────────────────────────────────────────────
+let lastT=0;
+function update(dt){
+  if(state!==ST.PLAY)return;
+  const t=dt/16.67;
+  speed=Math.min(BASE_SPEED+dist*SPEED_INC, BASE_SPEED*3);
+
+  // Grace period
+  if(graceTimer>0){graceTimer-=t;runner.y=GROUND_Y-runner.h+Math.sin(Date.now()/300)*3;return;}
+
+  // Runner physics
+  runner.vy+=GRAVITY*t;
+  runner.y+=runner.vy*t;
+  if(runner.y>=GROUND_Y-runner.h){runner.y=GROUND_Y-runner.h;runner.vy=0;runner.onGround=true;}
+  else runner.onGround=false;
+  runner.animT+=t;
+
+  // Scroll distance
+  dist+=speed*t;
+  score=Math.floor(dist/10);
+
+  // BG parallax
+  bgLayers.forEach(l=>l.items.forEach(item=>item.x-=l.speed*speed*t));
+
+  // Obstacles
+  nextObstacleIn-=speed*t;
+  if(nextObstacleIn<=0)spawnObstacle();
+  obstacles.forEach(o=>o.x-=speed*t);
+  obstacles=obstacles.filter(o=>o.x>-50);
+
+  // Coins
+  coins.forEach(c=>{c.x-=speed*t;c.animT+=t;});
+  coins=coins.filter(c=>c.x>-20);
+
+  // Collision
+  obstacles.forEach(o=>{
+    if(runner.x<o.x+o.w-4&&runner.x+runner.w>o.x+4&&runner.y<o.y+o.h-4&&runner.y+runner.h>o.y+4){
+      die();
+    }
+  });
+  coins.forEach(c=>{
+    if(!c.collected&&runner.x<c.x+12&&runner.x+runner.w>c.x&&runner.y<c.y+12&&runner.y+runner.h>c.y){
+      c.collected=true;score+=5;SFX.coin();spawnParticles(c.x,c.y,PAL.coin,6);
+    }
+  });
+
+  // Particles
+  particles=particles.filter(p=>{p.x+=p.vx*t;p.y+=p.vy*t;p.vy+=0.15*t;p.life-=0.04*t;return p.life>0;});
+  if(shakeT>0){shakeT=Math.max(0,shakeT-t);}
+}
+
+function die(){
+  if(state!==ST.PLAY)return;
+  state=ST.DEAD;shake=6;shakeT=12;SFX.die();
+  bestScore=Math.max(bestScore,score);localStorage.setItem(GAME_TITLE+'_b',bestScore);
+  spawnParticles(runner.x+runner.w/2,runner.y+runner.h/2,'#ef4444',12);
+  deathCount++;
+  try{window.CrazyGames?.SDK?.game?.gameplayStop();}catch(e){}
+  if(deathCount%3===0){try{window.CrazyGames?.SDK?.ad?.showAd('midgame');}catch(e){}}
+}
+
+// ── Draw ──────────────────────────────────────────────────
+function drawBG(){
+  ctx.fillStyle=PAL.bg;ctx.fillRect(0,0,W,H);
+  // Parallax mountains/buildings
+  bgLayers.forEach((l,li)=>{
+    ctx.fillStyle=li===0?'rgba(30,58,95,0.5)':'rgba(20,40,70,0.7)';
+    l.items.forEach(item=>{
+      const bx=(item.x%(W+100)+W+100)%(W+100)-50;
+      ctx.fillRect(bx,GROUND_Y-item.h,40,item.h);
+    });
+  });
+  // Ground
+  ctx.fillStyle=PAL.ground;ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+  ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(0,GROUND_Y,W,2);
+  // Ground dash lines (speed effect)
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  const dashOff=(dist*speed)%80;
+  for(let x=0;x<W+80;x+=80)ctx.fillRect(x-dashOff,GROUND_Y+8,40,2);
+}
+
+function drawRunner(){
+  ctx.save();
+  ctx.translate(runner.x+runner.w/2,runner.y+runner.h/2);
+  // Squash/stretch on jump
+  const sy=runner.onGround?1:runner.vy<0?1.3:0.8;
+  const sx=runner.onGround?1:runner.vy<0?0.7:1.1;
+  ctx.scale(sx,sy);
+  // Body
+  ctx.fillStyle=PAL.runner;
+  ctx.shadowColor=PAL.runner;ctx.shadowBlur=8;
+  ctx.fillRect(-runner.w/2,-runner.h/2,runner.w,runner.h);
+  ctx.shadowBlur=0;
+  // Eyes
+  ctx.fillStyle='#fff';
+  ctx.fillRect(runner.w/2-8,-runner.h/2+4,5,5);
+  ctx.fillStyle='#000';
+  ctx.fillRect(runner.w/2-7,-runner.h/2+5,3,3);
+  // Legs animation
+  if(runner.onGround){
+    const legOff=Math.sin(runner.animT*0.4)*6;
+    ctx.fillStyle=PAL.ground;
+    ctx.fillRect(-4,runner.h/2-2,6,4+legOff);
+    ctx.fillRect(2,runner.h/2-2,6,4-legOff);
+  }
+  ctx.restore();
+}
+
+function drawObstacles(){
+  obstacles.forEach(o=>{
+    ctx.fillStyle=PAL.obstacle;
+    ctx.shadowColor=PAL.obstacle;ctx.shadowBlur=6;
+    ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.shadowBlur=0;
+    // Spiky top
+    ctx.fillStyle='#c026d3';
+    for(let i=0;i<o.w;i+=6)ctx.fillRect(o.x+i,o.y-3,4,4);
+  });
+}
+
+function drawCoins(){
+  coins.forEach(c=>{
+    if(c.collected)return;
+    const pulse=Math.sin(c.animT*0.15)*2;
+    ctx.fillStyle=PAL.coin;ctx.shadowColor=PAL.coin;ctx.shadowBlur=8;
+    ctx.beginPath();ctx.arc(c.x+6,c.y+6,6+pulse,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.beginPath();ctx.arc(c.x+4,c.y+4,2,0,Math.PI*2);ctx.fill();
+  });
+}
+
+function drawParticles(){
+  particles.forEach(p=>{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,4,4);});
+  ctx.globalAlpha=1;
+}
+
+function drawHUD(){
+  ctx.font='bold 12px Courier New';
+  ctx.textAlign='center';
+  ctx.fillStyle='#000';ctx.fillText(score,W/2+1,21);
+  ctx.fillStyle=PAL.text;ctx.fillText(score,W/2,20);
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.font='bold 8px Courier New';
+  ctx.fillText(`BEST:${bestScore}`,W-8,20);
+  const spd=((speed/BASE_SPEED-1)*100).toFixed(0);
+  ctx.fillStyle=speed>BASE_SPEED*2?'#ef4444':speed>BASE_SPEED*1.5?'#f59e0b':'#10b981';
+  ctx.fillText(`×${(speed/BASE_SPEED).toFixed(1)}`,W-8,32);
+  ctx.textAlign='left';
+}
+
+function drawGame(){
+  ctx.save();
+  if(shakeT>0)ctx.translate((Math.random()-.5)*shake*2,(Math.random()-.5)*shake*2);
+  drawBG();drawObstacles();drawCoins();drawParticles();drawRunner();drawHUD();
+  ctx.restore();
+}
+
+function drawTitle(){
+  ctx.fillStyle=PAL.bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,255,255,0.04)';
+  for(let i=0;i<15;i++)ctx.fillRect(Math.random()*W,Math.random()*H,1,1);
+  ctx.textAlign='center';
+  ctx.font='bold 28px Courier New';
+  ctx.fillStyle='#000';ctx.fillText(GAME_TITLE,W/2+2,102);
+  ctx.fillStyle=PAL.runner;ctx.shadowColor=PAL.runner;ctx.shadowBlur=16;
+  ctx.fillText(GAME_TITLE,W/2,100);ctx.shadowBlur=0;
+  ctx.font='bold 8px Courier New';
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.fillText('TAP / SPACE TO START',W/2,130);
+  if(bestScore>0){ctx.fillStyle='rgba(255,215,0,0.5)';ctx.fillText('BEST: '+bestScore,W/2,145);}
+  ctx.textAlign='left';
+}
+
+function drawDead(){
+  drawGame();
+  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';
+  ctx.font='bold 20px Courier New';
+  ctx.fillStyle='#ef4444';ctx.fillText('GAME OVER',W/2,H/2-15);
+  ctx.font='bold 10px Courier New';
+  ctx.fillStyle='#fff';ctx.fillText('SCORE: '+score,W/2,H/2+5);
+  ctx.fillStyle='#ffd700';ctx.fillText('BEST: '+bestScore,W/2,H/2+20);
+  if(Math.floor(Date.now()/700)%2===0){ctx.fillStyle='#10b981';ctx.fillText('TAP TO RETRY',W/2,H/2+40);}
+  ctx.textAlign='left';
+}
+
+let _raf;
+function _loop(ts){_raf=requestAnimationFrame(_loop);const dt=Math.min(ts-lastT,50);lastT=ts;update(dt);if(state===ST.TITLE)drawTitle();else if(state===ST.PLAY)drawGame();else drawDead();}
+window.pauseLoop=()=>cancelAnimationFrame(_raf);
+window.resumeLoop=()=>{_raf=requestAnimationFrame(_loop);};
+requestAnimationFrame(ts=>{lastT=ts;_raf=requestAnimationFrame(_loop);});
+</script></body></html>
