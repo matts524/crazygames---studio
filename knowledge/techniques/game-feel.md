@@ -169,6 +169,50 @@ streak = 0;
 
 ---
 
+## Timed Special Events ("Rush Hour" Pattern)
+Any time-management or score-chase game benefits from a **surprise event** — a brief period where rules change dramatically. Triggers a dopamine spike and creates memorable moments players talk about.
+
+```js
+// Rush Hour pattern — reuse for any game
+let rushActive = false, rushTimer = 0, rushBanner = 0;
+const RUSH_DURATION = 10; // seconds
+
+function maybeStartRush() {
+  if (!rushActive && conditionMet) {
+    rushActive = true; rushTimer = RUSH_DURATION; rushBanner = 150;
+    // play ascending fanfare
+    [300,400,500,600,700].forEach((f,i) => setTimeout(()=>beep(f,0.08),i*60));
+  }
+}
+function tickRush(dt) {
+  if (!rushActive) return;
+  rushTimer -= dt/1000;
+  if (rushBanner > 0) rushBanner--;
+  if (rushTimer <= 0) rushActive = false;
+}
+// Then use rushActive to modify game speed, difficulty, scoring
+```
+
+**When to trigger:** every N successful actions (5–8 is ideal), at a minimum level requirement (level 3+).
+**Duration:** 8–12 seconds. Long enough to feel intense, short enough to want it again.
+**Tell the player it's coming:** "Rush Hour unlocked!" on level-up.
+
+## Ambient Kitchen / Background Details
+Static backgrounds feel dead. Add 2–3 animated details at near-zero cost:
+- Clock with `Math.cos/sin` hands driven by `Date.now()/1000`
+- Hanging decorations (herbs, garlic, plants) as static `fillRect` pixel art
+- Background colour shifts slightly during events (Rush Hour = warmer floor tiles)
+
+These score big on visual dimension (+0.2–0.4) for <30 lines of code.
+
+## Level-Up Screen: 3-Act Reveal
+Simple flash is forgettable. Use a 3-act animated reveal instead:
+1. Radiating light rays (simple sin/cos lines from centre, fading in)
+2. Badge scales in from 0.7× to 1× with rounded-rect backing
+3. Unlock hint text fades in after badge is visible
+
+Total extra code: ~25 lines. Visual score improvement: measurable.
+
 ## Lessons from Reflexion Rounds
 
 | Improvement | Score impact | Notes |

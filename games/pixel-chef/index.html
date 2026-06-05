@@ -89,9 +89,13 @@ let orders, plate, particles;
 let orderTimer, levelUpTimer;
 let bestScore = parseInt(localStorage.getItem('pcr_best')) || 0;
 // R2 additions
-let scorePopups = [];          // flying score numbers
-let chefMood    = 'neutral';   // 'neutral' | 'happy' | 'sad' | 'excited'
-let chefMoodTimer = 0;         // frames to hold current mood
+let scorePopups = [];
+let chefMood = 'neutral', chefMoodTimer = 0;
+// R3: Rush Hour event
+let rushHour = false, rushHourTimer = 0;
+const RUSH_HOUR_DURATION = 10; // seconds
+let rushHourBanner = 0;        // frames to show banner
+let nextRushAt = 5;            // orders until next Rush Hour triggers
 let deathCount = 0;
 
 // Station rects (bottom row)
@@ -113,7 +117,7 @@ const ORDER_SLOTS = [
   { x: 272, y: 44, w: 118, h: 90 },
 ];
 
-function getTimer() { return Math.max(7, 13 - level); }
+function getTimer() { return Math.max(7, 13 - level) * (rushHour ? 0.65 : 1); } // R3: Rush Hour = 65% timer
 function maxOrders() { return level < 2 ? 1 : level < 4 ? 2 : 3; }
 
 function newOrder() {
@@ -130,6 +134,7 @@ function init() {
   orderTimer = 0;
   shake = 0; shakeFrames = 0; streak = 0;
   scorePopups = []; chefMood = 'neutral'; chefMoodTimer = 0;
+  rushHour = false; rushHourTimer = 0; rushHourBanner = 0; nextRushAt = 5;
   cgStart();
 }
 
@@ -168,6 +173,16 @@ function update(dt) {
 
   // Station animations
   stations.forEach(s => { if (s.anim > 0) s.anim = Math.max(0, s.anim - 0.1 * t); });
+
+  // R3: Rush Hour tick
+  if (rushHour) {
+    rushHourTimer -= dt / 1000;
+    if (rushHourBanner > 0) rushHourBanner -= t;
+    if (rushHourTimer <= 0) {
+      rushHour = false;
+      chefMood = 'happy'; chefMoodTimer = 60;
+    }
+  }
 
   // Particles
   particles = particles.filter(p => {
@@ -347,6 +362,48 @@ function drawPlate() {
   if (plate.length > 0) px(`${plate.length} ing`, W/2, py + ph - 20, 7, '#8b6940', 'center');
 }
 
+// R3: Rush Hour banner
+function drawRushHourBanner() {
+  const fadeIn  = Math.min(1, rushHourBanner / 30);
+  const fadeOut = rushHourBanner < 30 ? rushHourBanner / 30 : 1;
+  const alpha   = Math.min(fadeIn, fadeOut);
+  const scale   = 0.8 + fadeIn * 0.2;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(W/2, H/2 - 60);
+  ctx.scale(scale, scale);
+
+  // Banner backing
+  ctx.fillStyle = 'rgba(220, 50, 0, 0.85)';
+  roundRect(-110, -22, 220, 44, 10); ctx.fill();
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+  roundRect(-110, -22, 220, 44, 10); ctx.stroke();
+
+  // Flicker highlight
+  if (Math.floor(Date.now()/80) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    roundRect(-110, -22, 220, 44, 10); ctx.fill();
+  }
+
+  // Text
+  ctx.font = 'bold 20px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#000';
+  ctx.fillText('🔥 RUSH HOUR! 🔥', 1, 7);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText('🔥 RUSH HOUR! 🔥', 0, 6);
+
+  // Timer bar under banner
+  const pct = rushHourTimer / RUSH_HOUR_DURATION;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(-108, 24, 216, 6);
+  ctx.fillStyle = pct > 0.5 ? '#ffd700' : pct > 0.25 ? '#f97316' : '#ef4444';
+  ctx.fillRect(-108, 24, 216 * pct, 6);
+
+  ctx.restore();
+}
+
 // R2: Floating score popups
 function drawScorePopups() {
   scorePopups = scorePopups.filter(p => {
@@ -431,15 +488,58 @@ function drawTitle() {
 }
 
 function drawKitchenBg() {
-  // Floor tiles
+  // Floor tiles — R3: slightly warmer colour during Rush Hour
+  const floorA = rushHour ? '#3d2010' : '#2d1b0e';
+  const floorB = rushHour ? '#341508' : '#251508';
   for (let tx = 0; tx < W; tx += 40) for (let ty = 0; ty < H; ty += 40) {
-    ctx.fillStyle = (tx/40 + ty/40) % 2 === 0 ? '#2d1b0e' : '#251508';
+    ctx.fillStyle = (tx/40 + ty/40) % 2 === 0 ? floorA : floorB;
     ctx.fillRect(tx, ty, 40, 40);
   }
+
+  // R3: Kitchen wall decorations
+  // Wall clock (top-right area)
+  ctx.fillStyle = '#5a3a1a';
+  ctx.beginPath(); ctx.arc(W - 32, 70, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f5deb3';
+  ctx.beginPath(); ctx.arc(W - 32, 70, 13, 0, Math.PI * 2); ctx.fill();
+  // Clock hands (animated!)
+  const now = Date.now() / 1000;
+  ctx.strokeStyle = '#2d1b0e'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(W - 32, 70);
+  ctx.lineTo(W - 32 + Math.cos(now * 0.5) * 9, 70 + Math.sin(now * 0.5) * 9);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W - 32, 70);
+  ctx.lineTo(W - 32 + Math.cos(now * 6) * 6, 70 + Math.sin(now * 6) * 6);
+  ctx.stroke();
+  // Clock dots
+  ctx.fillStyle = '#2d1b0e';
+  ctx.beginPath(); ctx.arc(W - 32, 70, 1.5, 0, Math.PI * 2); ctx.fill();
+
+  // Hanging herbs / garlic (top-left)
+  ctx.fillStyle = '#5a8a3a'; ctx.fillRect(18, 58, 6, 18);
+  ctx.fillStyle = '#4a7a2a'; ctx.fillRect(26, 62, 5, 14);
+  ctx.fillStyle = '#3a6a1a'; ctx.fillRect(34, 60, 6, 16);
+  // Herb string
+  ctx.strokeStyle = '#8b6914'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(14, 58); ctx.lineTo(44, 58); ctx.stroke();
+
+  // Small pot/plant on shelf (middle-left area)
+  ctx.fillStyle = '#8b4513';
+  ctx.fillRect(12, 130, 20, 14);
+  ctx.fillStyle = '#a0522d';
+  ctx.fillRect(10, 128, 24, 5);
+  ctx.fillStyle = '#3a8a2a';
+  ctx.beginPath(); ctx.arc(22, 122, 9, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#2a7a1a';
+  ctx.beginPath(); ctx.arc(17, 124, 5, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.arc(27, 124, 5, Math.PI, 0); ctx.fill();
+
   // Counter top
-  ctx.fillStyle = '#8b6914';
+  ctx.fillStyle = rushHour ? '#a07820' : '#8b6914';
   ctx.fillRect(0, H - 105, W, 8);
-  ctx.fillStyle = '#6b4c0a';
+  ctx.fillStyle = rushHour ? '#7a5a10' : '#6b4c0a';
   ctx.fillRect(0, H - 105, W, 3);
 }
 
@@ -475,8 +575,11 @@ function drawGame() {
   // HUD (drawn last so it's on top)
   drawHUD();
   drawParticles();
-  drawScorePopups(); // R2
+  drawScorePopups();
   ctx.restore(); // end screen shake
+
+  // R3: Rush Hour banner — drawn OUTSIDE shake transform for stability
+  if (rushHourBanner > 0) drawRushHourBanner();
 
   // ── IMPROVEMENT 3: Streak indicator ──
   if (streak >= 2) {
@@ -507,7 +610,7 @@ function drawDead() {
   px(`Best: ${bestScore}`, W/2, 268, 10, '#f59e0b', 'center');
   px(`Orders: ${ordersCompleted}`, W/2, 288, 10, '#c8a87a', 'center');
 
-  const stars = score < 5 ? 1 : score < 15 ? 2 : 3;
+  const stars = score < 30 ? 1 : score < 80 ? 2 : 3;
   ctx.font = '28px serif';
   ctx.fillText('⭐'.repeat(stars), W/2, 325);
 
@@ -515,15 +618,48 @@ function drawDead() {
     px('TAP TO PLAY AGAIN', W/2, 370, 12, '#10b981', 'center');
 }
 
+// R3: Enhanced level-up screen with particle burst + unlock hint
 function drawLevelUp() {
   drawGame();
-  ctx.fillStyle = `rgba(0,0,0,${0.7 * (levelUpTimer/100)})`;
+  const progress = 1 - (levelUpTimer / 100);
+  ctx.fillStyle = `rgba(0,0,0,${0.72 * progress})`;
   ctx.fillRect(0, 0, W, H);
-  const s = 1 + (1 - levelUpTimer/100) * 0.5;
-  ctx.save(); ctx.translate(W/2, H/2); ctx.scale(s, s);
-  px('LEVEL UP!', 0, -10, 28, '#f59e0b', 'center');
-  px(`Level ${level}`, 0, 24, 16, '#fff', 'center');
+
+  // Radiating lines (burst effect)
+  const numRays = 12;
+  for (let i = 0; i < numRays; i++) {
+    const angle  = (i / numRays) * Math.PI * 2 + progress * 0.5;
+    const rayLen = 80 + progress * 120;
+    const alpha  = (1 - progress) * 0.25;
+    ctx.strokeStyle = `rgba(245,158,11,${alpha})`;
+    ctx.lineWidth   = 3;
+    ctx.beginPath();
+    ctx.moveTo(W/2, H/2);
+    ctx.lineTo(W/2 + Math.cos(angle) * rayLen, H/2 + Math.sin(angle) * rayLen);
+    ctx.stroke();
+  }
+
+  // Badge
+  const scale = 0.7 + progress * 0.3;
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = 'rgba(245,158,11,0.2)';
+  roundRect(-90, -40, 180, 80, 12); ctx.fill();
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+  roundRect(-90, -40, 180, 80, 12); ctx.stroke();
+
+  px('LEVEL UP!',  0, -8,  24, '#f59e0b', 'center');
+  px(`Level ${level}`, 0, 22, 14, '#fff', 'center');
   ctx.restore();
+
+  // Unlock hint at level 3 (Rush Hour unlocked!)
+  if (level === 3 && progress > 0.5) {
+    ctx.globalAlpha = (progress - 0.5) * 2;
+    px('🔥 RUSH HOUR MODE UNLOCKED!', W/2, H/2 + 68, 8, '#ef4444', 'center');
+    ctx.globalAlpha = 1;
+  }
 }
 
 // ── Match logic ────────────────────────────────────────────────
@@ -551,9 +687,17 @@ function tryServe() {
     spawnParticles(W/2, H/2, isPerfect ? '#ffd700' : '#10b981');
     if (isPerfect) spawnParticles(W/2, 180, '#ffd700', 12);
     if (streakBonus > 0) spawnParticles(W/2, 60, '#f59e0b');
-    // R2: score popup + chef mood
     scorePopups.push({ x: W/2, y: 200, value: total, perfect: isPerfect, life: 1.0, vy: -1.2 });
     chefMood = streak >= 4 ? 'excited' : 'happy'; chefMoodTimer = 90;
+    // R3: Rush Hour trigger
+    if (level >= 3 && !rushHour && ordersCompleted >= nextRushAt) {
+      rushHour = true;
+      rushHourTimer = RUSH_HOUR_DURATION;
+      rushHourBanner = 150;
+      nextRushAt = ordersCompleted + 5 + Math.floor(Math.random() * 5);
+      chefMood = 'excited'; chefMoodTimer = 150;
+      [300,400,500,600,700].forEach((f,i) => setTimeout(() => beep(f, 0.08, 'sine', 0.25), i * 60));
+    }
     orders[idx] = newOrder();
     plate = [];
   } else {
