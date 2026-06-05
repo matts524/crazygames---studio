@@ -117,9 +117,52 @@
       "affectedAgents": [
         "developer"
       ],
-      "status": "integrating",
+      "status": "integrated",
       "suggestedAt": "2026-06-05T12:00:00Z",
       "approvedAt": "2026-06-05T18:58:00.789Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "integrationNotes": "📥 Fetching zzfxm.min.js from jsDelivr CDN...\n✅ zzfxm.min.js saved (0.6kb) → templates/\n📝 Writing instructions...\n🚀 Pushing to GitHub...\n✅ Committed and pushed to GitHub"
+    },
+    {
+      "id": "matterjs",
+      "name": "Matter.js — 2D Physics Engine",
+      "githubUrl": "https://github.com/liabru/matter-js",
+      "stars": 17000,
+      "licence": "MIT",
+      "lastCommit": "2024-09",
+      "fileSize": "~87kb minified",
+      "importance": "important",
+      "importanceReason": "LittleJS physics is rect-only with no joints or constraints — Matter.js adds real rigid bodies, ropes, hinges and stacking that unlock an entirely new category of physics games",
+      "brief": "A 2D rigid body physics engine for the browser — real collision geometry, constraints, stacking and forces.",
+      "whyItMatters": "Right now every 'physics' game in the studio fakes it. Tower Collapse hand-codes a stability score. Stack Master uses pure math for the pendulum. Neither has real weight, bounce, or chain reactions. Matter.js runs a proper physics simulation — objects have mass, friction, restitution. You drop a block and it bounces realistically. You attach a hinge and it swings. You stack 10 boxes and the bottom ones buckle under the weight. This unlocks an entire tier of games that currently aren't possible: wrecking balls, dominoes, ragdolls, Angry-Birds-style destruction, real Jenga, bridge builders, and rope-swinging.",
+      "systemBenefit": "• Tower Collapse rebuilt with real Jenga physics — blocks actually topple from weight\n• New game archetypes unlocked: wrecking ball, domino chain, rope swing, catapult, bridge builder\n• Ragdoll characters (enemies that crumple on hit)\n• Soft stacking — place objects that settle naturally under gravity\n• Constraint system: ropes, springs, hinges, pivot points\n• Works alongside LittleJS — Matter.js handles physics sim, LittleJS handles rendering\n• CrazyGames-compliant: single JS file, no server, loads in <1s",
+      "systemBenefitBullets": [
+        "Real rigid body stacking — Tower Collapse rebuilt properly",
+        "Ropes, hinges, springs via constraint system",
+        "Ragdoll enemies and characters",
+        "Wrecking ball, catapult, domino-chain game types",
+        "Destruction physics (break things apart)",
+        "Works alongside LittleJS — Matter.js sim, LittleJS render"
+      ],
+      "integration": "1. Download matter.min.js (~87kb) → templates/matter.min.js\n2. Add <script src='../../templates/matter.min.js'> BEFORE littlejs.min.js in game templates\n3. Create templates/matter-littlejs-bridge.js — thin adapter that reads Matter body positions each frame and feeds them to LittleJS EngineObjects for rendering\n4. Add Matter.js API guide to agents/AGENT_INSTRUCTIONS.md (Engine, World, Bodies, Constraint)\n5. Create templates/physics-sandbox.html — a demo showing boxes, ropes, and hinges working together\n6. Update knowledge/KNOWLEDGE.md with physics patterns\n7. Commit and push to GitHub",
+      "integrationPattern": "// Matter.js + LittleJS pattern:\n// 1. Create Matter bodies for physics sim\n// 2. Each frame in gameUpdate(): copy Matter body.position/angle to LittleJS object\n// 3. LittleJS renders at the physics-simulated positions\n// Matter engine runs at fixed timestep, LittleJS renders at display framerate",
+      "affectedAgents": [
+        "developer",
+        "designer"
+      ],
+      "gamesUnlocked": [
+        "Real Jenga (Tower Collapse v2)",
+        "Wrecking Ball",
+        "Angry Birds style",
+        "Bridge Builder",
+        "Domino Chain",
+        "Rope Swing platformer",
+        "Ragdoll Fighter"
+      ],
+      "status": "integrating",
+      "suggestedAt": "2026-06-05T20:45:00Z",
+      "approvedAt": "2026-06-05T19:48:13.586Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "integrationNotes": null

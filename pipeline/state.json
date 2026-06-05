@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-05T18:58:00.790Z",
+  "lastUpdated": "2026-06-05T19:48:13.588Z",
   "studioRunning": true,
   "agents": [
     {
@@ -7,7 +7,7 @@
       "name": "Idea Agent",
       "icon": "💡",
       "status": "idle",
-      "currentTask": "Stack Master approved ✓",
+      "currentTask": "Tower Collapse approved ✓",
       "color": "#f59e0b"
     },
     {
@@ -35,11 +35,19 @@
       "color": "#10b981"
     },
     {
+      "id": "playtest",
+      "name": "Playtest Agent",
+      "icon": "🎮",
+      "status": "idle",
+      "currentTask": "Tower Collapse — PASS_WITH_FIXES ✓ (fixed BUG-01 + BUG-04)",
+      "color": "#06b6d4"
+    },
+    {
       "id": "qa",
       "name": "QA Agent",
       "icon": "🧪",
       "status": "idle",
-      "currentTask": "QA complete ✓ (8.1/10)",
+      "currentTask": "QA PASSED ✓ Tower Collapse 8.4/10",
       "color": "#ef4444"
     },
     {
@@ -47,7 +55,7 @@
       "name": "Reflexion Agent",
       "icon": "🔁",
       "status": "idle",
-      "currentTask": "Stack Master score 8.1 < 9.0 — reflexion eligible",
+      "currentTask": "Tower Collapse 8.4 + Stack Master 8.1 — both reflexion eligible",
       "color": "#ec4899"
     },
     {
@@ -55,7 +63,7 @@
       "name": "Tool Scout",
       "icon": "🔭",
       "status": "active",
-      "currentTask": "Integrating ZzFXM — Background Music...",
+      "currentTask": "Integrating Matter.js — 2D Physics Engine...",
       "color": "#a78bfa"
     }
   ],
@@ -124,6 +132,54 @@
       "time": "19:58",
       "icon": "🔧",
       "msg": "Integrating: ZzFXM — Background Music",
+      "detail": "Download started"
+    },
+    {
+      "time": "19:58",
+      "icon": "🔧",
+      "msg": "INTEGRATED: ZzFXM — Background Music",
+      "detail": "All steps complete"
+    },
+    {
+      "time": "20:05",
+      "icon": "✅",
+      "msg": "Approved: Tower Collapse",
+      "detail": "Moving to research pipeline"
+    },
+    {
+      "time": "20:05",
+      "icon": "🔬",
+      "msg": "Research Agent activated",
+      "detail": "Analysing puzzle for Tower Collapse"
+    },
+    {
+      "time": "20:10",
+      "icon": "🎨",
+      "msg": "Design complete",
+      "detail": "10 levels, 3-star scoring, pixel animals, hover stability preview"
+    },
+    {
+      "time": "20:20",
+      "icon": "⚙️",
+      "msg": "Build complete",
+      "detail": "Tower Collapse — wobble physics, collapse cascade, pixel art animals"
+    },
+    {
+      "time": "20:28",
+      "icon": "🧪",
+      "msg": "QA PASSED (8.4/10)",
+      "detail": "All 10 levels verified, physics stable, CrazyGames compliant"
+    },
+    {
+      "time": "20:32",
+      "icon": "✈️",
+      "msg": "SHIPPED: Tower Collapse",
+      "detail": "4 games total now shipped. 6 ideas remaining in queue."
+    },
+    {
+      "time": "20:48",
+      "icon": "🔧",
+      "msg": "Integrating: Matter.js — 2D Physics Engine",
       "detail": "Download started"
     }
   ]

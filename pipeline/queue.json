@@ -1,10 +1,81 @@
 {
   "ideas": [
-    { "id": "snake-chaos",   "title": "Snake Chaos",      "concept": "Multiplayer snake where eating power-ups changes physics — gravity flips, time slows, snakes merge", "genre": "arcade",  "status": "idea", "approved": false, "artStyle": "neon",       "priority": 1, "createdAt": "2026-06-04T00:00:00Z", "tags": ["multiplayer","physics","arcade","casual"],       "crazygamesCategory": "Arcade",  "estimatedBuildTime": "2-3 hours" },
-    { "id": "tower-collapse","title": "Tower Collapse",   "concept": "Jenga-style physics puzzle where you must remove blocks without toppling a tower of sleeping animals",  "genre": "puzzle",  "status": "idea", "approved": false, "artStyle": "pixel",      "priority": 2, "createdAt": "2026-06-04T00:00:00Z", "tags": ["physics","puzzle","casual","cute"],              "crazygamesCategory": "Puzzle",  "estimatedBuildTime": "3-4 hours" },
-    { "id": "word-dungeon",  "title": "Word Dungeon",     "concept": "Roguelike where your weapon stats are determined by the words you spell — longer/rarer words = more power","genre": "word",    "status": "idea", "approved": false, "artStyle": "retro",      "priority": 3, "createdAt": "2026-06-04T00:00:00Z", "tags": ["word","roguelike","rpg","educational"],          "crazygamesCategory": "Word",    "estimatedBuildTime": "5-6 hours" },
-    { "id": "color-flood",   "title": "Color Flood",      "concept": "Flood-fill puzzle — paint the board one color at a time, starting from the corner, beat it in limited moves","genre": "puzzle","status": "idea", "approved": false, "artStyle": "minimalist", "priority": 4, "createdAt": "2026-06-04T00:00:00Z", "tags": ["puzzle","color","minimalist","casual"],          "crazygamesCategory": "Puzzle",  "estimatedBuildTime": "2-3 hours" },
-    { "id": "idle-factory",  "title": "Idle Factory",     "concept": "Idle clicker where you automate a toy factory — buy machines, hire robots, unlock production chains",     "genre": "idle",    "status": "idea", "approved": false, "artStyle": "vector",     "priority": 5, "createdAt": "2026-06-04T00:00:00Z", "tags": ["idle","clicker","casual","incremental"],         "crazygamesCategory": "Clicker", "estimatedBuildTime": "4-5 hours" },
+    {
+      "id": "snake-chaos",
+      "title": "Snake Chaos",
+      "concept": "Multiplayer snake where eating power-ups changes physics — gravity flips, time slows, snakes merge",
+      "genre": "arcade",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "neon",
+      "priority": 1,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": [
+        "multiplayer",
+        "physics",
+        "arcade",
+        "casual"
+      ],
+      "crazygamesCategory": "Arcade",
+      "estimatedBuildTime": "2-3 hours"
+    },
+    {
+      "id": "word-dungeon",
+      "title": "Word Dungeon",
+      "concept": "Roguelike where your weapon stats are determined by the words you spell — longer/rarer words = more power",
+      "genre": "word",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "retro",
+      "priority": 3,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": [
+        "word",
+        "roguelike",
+        "rpg",
+        "educational"
+      ],
+      "crazygamesCategory": "Word",
+      "estimatedBuildTime": "5-6 hours"
+    },
+    {
+      "id": "color-flood",
+      "title": "Color Flood",
+      "concept": "Flood-fill puzzle — paint the board one color at a time, starting from the corner, beat it in limited moves",
+      "genre": "puzzle",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "minimalist",
+      "priority": 4,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": [
+        "puzzle",
+        "color",
+        "minimalist",
+        "casual"
+      ],
+      "crazygamesCategory": "Puzzle",
+      "estimatedBuildTime": "2-3 hours"
+    },
+    {
+      "id": "idle-factory",
+      "title": "Idle Factory",
+      "concept": "Idle clicker where you automate a toy factory — buy machines, hire robots, unlock production chains",
+      "genre": "idle",
+      "status": "idea",
+      "approved": false,
+      "artStyle": "vector",
+      "priority": 5,
+      "createdAt": "2026-06-04T00:00:00Z",
+      "tags": [
+        "idle",
+        "clicker",
+        "casual",
+        "incremental"
+      ],
+      "crazygamesCategory": "Clicker",
+      "estimatedBuildTime": "4-5 hours"
+    },
     {
       "id": "merge-valley",
       "title": "Merge Valley",
@@ -15,7 +86,13 @@
       "artStyle": "cute",
       "priority": 6,
       "createdAt": "2026-06-05T00:00:00Z",
-      "tags": ["merge","puzzle","casual","cute","animals"],
+      "tags": [
+        "merge",
+        "puzzle",
+        "casual",
+        "cute",
+        "animals"
+      ],
       "crazygamesCategory": "Puzzle",
       "estimatedBuildTime": "3-4 hours",
       "researchNote": "Merge mechanic is #1 trending in 2025 hypercasual. Cute animals = strong thumbnail. Board overflow = natural urgency without timer."
@@ -30,7 +107,13 @@
       "artStyle": "neon",
       "priority": 7,
       "createdAt": "2026-06-05T00:00:00Z",
-      "tags": ["io","blob","arcade","growth","survival"],
+      "tags": [
+        "io",
+        "blob",
+        "arcade",
+        "growth",
+        "survival"
+      ],
       "crazygamesCategory": "Arcade",
       "estimatedBuildTime": "2-3 hours",
       "researchNote": "IO games are CrazyGames' highest traffic category. Shell Shockers = most played. Solo IO-lite = zero multiplayer infra needed, same feel."
@@ -40,35 +123,84 @@
   "completed": [],
   "shipped": [
     {
-      "id": "gravity-flip", "title": "Gravity Flipper",
+      "id": "gravity-flip",
+      "title": "Gravity Flipper",
       "concept": "Endless runner where you flip gravity with one button",
-      "genre": "arcade", "status": "shipped", "approved": true, "artStyle": "neon", "progress": 100,
-      "tags": ["endless-runner","one-button","arcade","hypercasual"], "crazygamesCategory": "Arcade",
+      "genre": "arcade",
+      "status": "shipped",
+      "approved": true,
+      "artStyle": "neon",
+      "progress": 100,
+      "tags": [
+        "endless-runner",
+        "one-button",
+        "arcade",
+        "hypercasual"
+      ],
+      "crazygamesCategory": "Arcade",
       "gameFile": "./games/gravity-flip/index.html",
       "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/gravity-flip/index.html",
-      "iframeTestPassed": true, "crazygamesSubmitted": false,
+      "iframeTestPassed": true,
+      "crazygamesSubmitted": false,
       "completedAt": "2026-06-04T10:46:00Z"
     },
     {
-      "id": "pixel-chef", "title": "Pixel Chef Rush",
+      "id": "pixel-chef",
+      "title": "Pixel Chef Rush",
       "concept": "Overcooked-style cooking game with pixel art and absurd recipe combos",
-      "genre": "casual", "status": "shipped", "approved": true, "artStyle": "pixel", "progress": 100,
-      "tags": ["cooking","casual","pixel-art","time-management"], "crazygamesCategory": "Casual",
+      "genre": "casual",
+      "status": "shipped",
+      "approved": true,
+      "artStyle": "pixel",
+      "progress": 100,
+      "tags": [
+        "cooking",
+        "casual",
+        "pixel-art",
+        "time-management"
+      ],
+      "crazygamesCategory": "Casual",
       "gameFile": "./games/pixel-chef/index.html",
       "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/pixel-chef/index.html",
-      "iframeTestPassed": true, "crazygamesSubmitted": false,
+      "iframeTestPassed": true,
+      "crazygamesSubmitted": false,
       "completedAt": "2026-06-05T09:22:00Z"
     },
     {
-      "id": "stack-master", "title": "Stack Master",
+      "id": "stack-master",
+      "title": "Stack Master",
       "concept": "A block swings left-right on a pendulum — tap to drop it onto the stack below. Overhang gets cut off. Stack 30 blocks perfectly for a bonus tower",
-      "genre": "arcade", "status": "shipped", "approved": true, "artStyle": "minimalist", "progress": 100,
-      "tags": ["stacking","timing","arcade","minimalist","one-tap"], "crazygamesCategory": "Arcade",
+      "genre": "arcade",
+      "status": "shipped",
+      "approved": true,
+      "artStyle": "minimalist",
+      "progress": 100,
+      "tags": [
+        "stacking",
+        "timing",
+        "arcade",
+        "minimalist",
+        "one-tap"
+      ],
+      "crazygamesCategory": "Arcade",
       "gameFile": "./games/stack-master/index.html",
       "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/stack-master/index.html",
-      "qaScore": 8.1, "iframeTestPassed": true, "crazygamesSubmitted": false,
+      "qaScore": 8.1,
+      "iframeTestPassed": true,
+      "crazygamesSubmitted": false,
       "completedAt": "2026-06-05T15:18:00Z",
       "notableFeatures": "LittleJS engine (first game), ZzFX sounds (perfect timing), pendulum physics, streak system"
+    },
+    {
+      "id": "tower-collapse", "title": "Tower Collapse",
+      "concept": "Jenga-style physics puzzle — remove blocks without toppling a tower of sleeping animals",
+      "genre": "puzzle", "status": "shipped", "approved": true, "artStyle": "pixel", "progress": 100,
+      "tags": ["physics","puzzle","casual","cute"], "crazygamesCategory": "Puzzle",
+      "gameFile": "./games/tower-collapse/index.html",
+      "githubPagesUrl": "https://matts524.github.io/crazygames---studio/games/tower-collapse/index.html",
+      "qaScore": 8.4, "iframeTestPassed": true, "crazygamesSubmitted": false,
+      "completedAt": "2026-06-05T19:32:00Z",
+      "notableFeatures": "10 levels, 3-star scoring, pixel art animals, hover stability preview, collapse physics"
     }
   ]
 }

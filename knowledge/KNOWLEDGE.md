@@ -3,10 +3,10 @@
 This is the studio's living memory. Every agent reads this before working.
 Every reflexion round writes new lessons here. The studio gets smarter with every game.
 
-**Last updated:** 2026-06-05  
-**Games built:** 2  
-**Knowledge entries:** 19  
-**Research runs:** 1
+**Last updated:** 2026-06-05 (20:35)
+**Games built:** 4 (Gravity Flipper, Pixel Chef Rush, Stack Master, Tower Collapse)
+**Knowledge entries:** 23
+**Playtest Agent:** ACTIVE — see agents/PLAYTEST_AGENT.md
 
 ---
 
@@ -40,3 +40,36 @@ These are the highest-ROI things the Dev Agent must apply to every game:
 10. **Walk cycle** — 4 frames: contact (foot fwd, body DOWN 1px) → passing (feet together, body UP 1px) → mirror → passing. NOT a bounce — the UP happens when feet are together.
 11. **Hold important animation frames longer** — strike/impact hold = 150–200ms, movement frames = 80ms. Never uniform FPS.
 12. **Smear frames for fast actions** — draw a 2px colour streak in motion direction instead of exact position. Reads as speed for free.
+
+---
+
+## 🚨 Critical LittleJS Bug Patterns (Playtest Agent discovered)
+
+**BUG-01: `TypeError: k.copy is not a function` inside ParticleEmitter**
+- **What:** `ParticleEmitter` crashes when passed a `Color` object created before `engineInit`
+- **Why:** LittleJS extends the `Color` class during `engineInit`. Pre-init Color objects lack `.copy()`
+- **Rule:** NEVER store `Color` objects at module level and pass them to `ParticleEmitter`. Always use `new Color(r,g,b)` INLINE inside the ParticleEmitter call. Module-level Colors are fine for `drawRect`.
+- **Example:**
+  ```js
+  // ❌ BROKEN — C_WOOD created before engineInit
+  const C_WOOD = new Color(0.78, 0.52, 0.26);
+  new ParticleEmitter(pos, 0, 0.4, 0.12, 10, PI, C_WOOD, C_WOOD, ...);
+  
+  // ✅ CORRECT — inline new Color()
+  new ParticleEmitter(pos, 0, 0.4, 0.12, 10, PI,
+    new Color(0.78,0.52,0.26), new Color(0.55,0.34,0.13), ...);
+  ```
+
+**BUG-02: Win/fail state silently blocked by exception mid-function**
+- **What:** `removeBlock` / similar handler throws before reaching win check → win never fires
+- **Rule:** Put win/state-change checks BEFORE any effect calls (particles, sounds). Use `return` after setting win state to skip remaining logic:
+  ```js
+  // ✅ CORRECT order in a "remove/collect" function:
+  // 1. Mark object as removed
+  // 2. Check win condition → if win, set state + return early
+  // 3. THEN play sounds/particles (effects can fail without breaking logic)
+  ```
+
+**BUG-03: Serve games via port 3500 (Express root), NOT a subfolder preview server**
+- **What:** `../../templates/littlejs.min.js` resolves incorrectly from a subfolder server
+- **Rule:** Always test at `http://localhost:3500/games/{id}/index.html`

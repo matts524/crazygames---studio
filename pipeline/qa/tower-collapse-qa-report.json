@@ -1,0 +1,91 @@
+{
+  "gameId": "tower-collapse",
+  "gameTitle": "Tower Collapse",
+  "testDate": "2026-06-05T19:30:00Z",
+  "qaAgent": "QA Agent v2.1",
+  "status": "PASSED",
+  "overallScore": 8.4,
+  "testDuration": "28 minutes",
+  "testResults": {
+    "gameplay": {
+      "name": "Gameplay Mechanics",
+      "score": 8.6,
+      "tests": [
+        { "name": "Block click/tap removes block", "status": "PASS", "detail": "Mouse click detected, block disappears with dust particle" },
+        { "name": "Stability recalculated after removal", "status": "PASS", "detail": "Wobble triggers on low-stability blocks correctly" },
+        { "name": "Collapse cascade triggers on instability < 15", "status": "PASS", "detail": "0.6s delay then collapse animation fires" },
+        { "name": "Win condition (all targets removed)", "status": "PASS", "detail": "Game enters WIN state when all yellow blocks removed" },
+        { "name": "Fail condition (tower topples)", "status": "PASS", "detail": "Blocks fall with velocity, animals wake up" },
+        { "name": "3-star scoring (moves vs par)", "status": "PASS", "detail": "Par-based stars calculated correctly; saved to localStorage" },
+        { "name": "Level select shows correct stars", "status": "PASS", "detail": "Stars per level loaded from localStorage and displayed" },
+        { "name": "Level unlock progression", "status": "PASS", "detail": "Next level unlocked on win, locked levels show 🔒" }
+      ]
+    },
+    "physics": {
+      "name": "Block Stability & Physics",
+      "score": 8.2,
+      "tests": [
+        { "name": "Wobble animation on unstable blocks", "status": "PASS", "detail": "sin() oscillation visible on blocks below stability threshold" },
+        { "name": "Falling blocks apply velocity", "status": "PASS", "detail": "velY/velX applied per frame on collapse; blocks fall off screen" },
+        { "name": "Target block glow pulses", "status": "PASS", "detail": "Golden pulse sin() animation visible on target blocks" },
+        { "name": "Hover stability preview (green/yellow/red)", "status": "PASS", "detail": "Colour tint correctly indicates removal risk level" }
+      ]
+    },
+    "visuals": {
+      "name": "Graphics & Pixel Art",
+      "score": 8.8,
+      "tests": [
+        { "name": "Title screen renders", "status": "PASS", "detail": "Tower, sleeping cat, title text, blinking TAP TO START visible" },
+        { "name": "Level select grid (2 rows of 5)", "status": "PASS", "detail": "All 10 levels rendered, stars shown, locked levels greyed" },
+        { "name": "Pixel animals render (cat/bunny/dog)", "status": "PASS", "detail": "All 3 animal types draw correctly with awake/sleeping state" },
+        { "name": "Zzz bubble animation", "status": "PASS", "detail": "Floating z characters animate on sleeping animals" },
+        { "name": "Wood grain on blocks", "status": "PASS", "detail": "Vertical grain lines visible; warm brown palette consistent" },
+        { "name": "Dust particles on block removal", "status": "PASS", "detail": "LittleJS ParticleEmitter triggers on each removed block" },
+        { "name": "Sky/ground background", "status": "PASS", "detail": "Gradient sky, green ground with grass detail strips" }
+      ]
+    },
+    "audio": {
+      "name": "Audio",
+      "score": 8.5,
+      "tests": [
+        { "name": "Block remove thud", "status": "PASS" },
+        { "name": "Wobble rumble on instability", "status": "PASS" },
+        { "name": "Collapse crash sound", "status": "PASS" },
+        { "name": "Win chime fanfare", "status": "PASS" },
+        { "name": "Animals wake squeak", "status": "PASS" },
+        { "name": "Star earned ding", "status": "PASS" }
+      ]
+    },
+    "crazygames": {
+      "name": "CrazyGames Compliance",
+      "score": 9.0,
+      "tests": [
+        { "name": "SDK initializes", "status": "PASS", "detail": "No errors in console" },
+        { "name": "gameplayStart() on level load", "status": "PASS" },
+        { "name": "gameplayStop() on win/fail", "status": "PASS" },
+        { "name": "10 levels minimum", "status": "PASS", "detail": "Exactly 10 levels present" },
+        { "name": "Single file + LittleJS (no external assets)", "status": "PASS" },
+        { "name": "Mobile touch works", "status": "PASS", "detail": "mouseWasPressed(0) covers both click and touch" }
+      ]
+    },
+    "performance": {
+      "name": "Performance",
+      "score": 8.5,
+      "tests": [
+        { "name": "60fps on desktop", "status": "PASS" },
+        { "name": "No errors in console", "status": "PASS" },
+        { "name": "localStorage save/load works", "status": "PASS" }
+      ]
+    }
+  },
+  "issuesFound": [
+    {
+      "severity": "MINOR",
+      "area": "Physics",
+      "issue": "Stability model is simplified (center-of-mass estimate) — extreme overhang positions may not trigger collapse visually even though they should",
+      "recommendation": "Acceptable for hypercasual; levels designed around the model so edge cases are avoided",
+      "priority": "low"
+    }
+  ],
+  "conclusion": "Tower Collapse is APPROVED FOR SHIPPING. All 10 levels functional, pixel art animals charming and distinct, block removal physics satisfying. CrazyGames compliant. Strong candidate for reflexion cycle to add juice (screen shake, level transitions)."
+}
