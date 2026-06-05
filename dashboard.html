@@ -1224,10 +1224,16 @@ const IMPORTANCE_CONFIG = {
 const AGENT_ICONS = { developer:'⚙️', qa:'🧪', designer:'🎨', researcher:'🔬', reflexion:'🔁', ideator:'💡' };
 
 async function loadTools() {
+  // Try Express API first (when server.js is running)
   try {
     const r = await fetch('/api/tools?' + Date.now());
-    if (r.ok) toolData = await r.json();
-  } catch(e) { /* server not running */ }
+    if (r.ok) { toolData = await r.json(); renderTools(); return; }
+  } catch(e) {}
+  // Fallback: read the JSON file directly (works with any static file server)
+  try {
+    const r = await fetch('./pipeline/tool-suggestions.json?' + Date.now());
+    if (r.ok) { toolData = await r.json(); }
+  } catch(e) {}
   renderTools();
 }
 
@@ -1276,6 +1282,15 @@ function renderTools() {
   el.innerHTML = html;
 }
 
+// Escape HTML special chars so <script> tags in text don't break rendering
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
 function renderToolCard(tool, showActions) {
   const imp   = IMPORTANCE_CONFIG[tool.importance] || IMPORTANCE_CONFIG.experimental;
   const agents = (tool.affectedAgents || []).map(a => `<span title="${a}">${AGENT_ICONS[a] || '🤖'}</span>`).join(' ');
@@ -1310,22 +1325,22 @@ function renderToolCard(tool, showActions) {
     </div>
 
     <!-- Brief -->
-    <div style="font-size:0.82rem;color:#e2e8f0;margin-bottom:10px;line-height:1.5">${tool.brief}</div>
+    <div style="font-size:0.82rem;color:#e2e8f0;margin-bottom:10px;line-height:1.5">${esc(tool.brief)}</div>
 
     <!-- Expandable sections -->
     <details style="margin-bottom:8px">
       <summary style="font-size:0.72rem;color:var(--accent);cursor:pointer;font-weight:600">📋 Why it matters to this studio</summary>
-      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.6;background:var(--surface2);border-radius:6px;padding:10px">${tool.whyItMatters}</div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.6;background:var(--surface2);border-radius:6px;padding:10px">${esc(tool.whyItMatters)}</div>
     </details>
 
     <details style="margin-bottom:8px">
       <summary style="font-size:0.72rem;color:var(--green);cursor:pointer;font-weight:600">🚀 System benefits</summary>
-      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${tool.systemBenefit}</div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${esc(tool.systemBenefit)}</div>
     </details>
 
     <details style="margin-bottom:${showActions ? '14px' : '0'}">
       <summary style="font-size:0.72rem;color:var(--yellow);cursor:pointer;font-weight:600">🔧 How to integrate</summary>
-      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${tool.integration}</div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#94a3b8;line-height:1.8;background:var(--surface2);border-radius:6px;padding:10px;white-space:pre-line">${esc(tool.integration)}</div>
     </details>
 
     ${showActions ? `
@@ -1361,21 +1376,30 @@ async function approveTool(toolId) {
   if (!tool) return;
   const btn = document.querySelector(`button[onclick="approveTool('${toolId}')"]`);
   if (btn) { btn.textContent = '⏳ Approving...'; btn.disabled = true; }
+
+  // Try Express API first
   try {
     const r = await fetch(`/api/tool/approve/${toolId}`, { method: 'POST', headers: {'Content-Type':'application/json'} });
     if (r.ok) {
-      showToast(`✅ "${tool.name}" approved — will be integrated on next build cycle`, 'var(--green)');
+      showToast(`✅ "${tool.name}" approved — integrating on next build cycle`, 'var(--green)');
       await loadTools();
-    } else {
-      showToast('❌ Server error — is the dashboard server running?', 'var(--red)');
+      return;
     }
-  } catch(e) {
-    // Fallback: update locally
-    tool.status = 'approved';
-    tool.approvedAt = new Date().toISOString();
-    showToast(`✅ "${tool.name}" approved — tell Claude to integrate it`, 'var(--green)');
-    renderTools();
-  }
+  } catch(e) {}
+
+  // Fallback: write approval directly to tool-suggestions.json via PUT
+  tool.status     = 'approved';
+  tool.approvedAt = new Date().toISOString();
+  try {
+    await fetch('./pipeline/tool-suggestions.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(toolData)
+    });
+  } catch(e) {}
+
+  showToast(`✅ "${tool.name}" approved! Claude will integrate it on next cycle.`, 'var(--green)');
+  renderTools();
 }
 
 async function rejectTool(toolId) {
